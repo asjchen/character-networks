@@ -1,0 +1,146 @@
+\documentclass{article}
+\usepackage{geometry}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+\usepackage{graphicx}
+\usepackage{tikz-cd}
+ \geometry{
+ letterpaper,
+ total={212mm,275mm},
+ left=25mm,
+ right=25mm,
+ top=25mm,
+ bottom=25mm,
+ bindingoffset=0mm 
+ }
+\usepackage[utf8]{inputenc}
+\usepackage{array}
+\usepackage{listings}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{float}
+
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\pr}{\text{Pr}}
+\DeclareMathOperator*{\expect}{\mathbb{E}} 
+
+
+\title{Directed by Randomness: Modeling Movie Character Networks with Random Graph Models}
+\author{Andy Chen}
+\date{October 2017}
+
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We first analyze existing literature in characterizing character networks in film and literature. While researchers have examined how undirected social networks might be generated, we still point out some limitations of such networks. We also investigate existing random directed graph models mentioned in the literature. Finally, we propose constructing a directed graph classifier to which random graph models most closely represent actual movie character networks.
+\end{abstract}
+
+\section{Literature Review}
+Scholars in the computer science and literary world have examined character networks in film and fictional literature. These graphs represent every character, whether protagonist or minor character, as a node. The edges in the graphs represent interactions between the characters connected; depending on the network, edges exist between characters that talk to each other, have familial relationships, etc.
+\newline\newline
+Character networks can provide high-level insight into a film or novel's structure; for instance, they can show to what degree the narrative focuses on the protagonists. In aggregate, character networks allow us to compare structure across different genres or authors. 
+\newline\newline
+We examine three articles that discuss character networks in order to motivate our project.
+
+\subsection{Modeling Undirected Character Networks}
+One major theme of social network research involves determining how the networks in question were generated. In other words, we often wish to know what underlying process generated the observable character network. In class, we discussed random undirected graph models such as the Erdos-Renyi and Watts-Strogatz small-world models, which serve as simplified versions of social phenomena$^{[5]}$. 
+\newline\newline
+Bonato et al. analyze the character networks of three novels and 800 films in \textit{Mining and Modeling Character Networks}$^{[1]}$. In their research, the authors obtain character networks based on co-occurrence in scenes. Then, they consider stochastic network models (for complex graphs, which can have multiple edges between two nodes) such as:
+\begin{itemize}
+	\item Configuration Model: graphs are sampled uniformly among all graphs with the desired degree distribution. As mentioned in class, we can visualize the sampling process as assigning each node $k_i$ ``stubs'', where $k_i$ is the degree of node $i$, and randomly joining edge stubs to each other.
+	\item Preferential Attachment Model: starting from an empty graph, nodes are added with their edges more likely to attach to nodes with already high degree. As we saw in class, preferential attachment can model social phenemona such as voter preference.
+	\item Chung-Lu Model: each edge in a graph occurs with probability proportional to the expected degree of its endpoints.
+\end{itemize}
+The authors train several classifiers, such as SVM and AdaBoost algorithms, to categorize graphs according to their generative processes. Then, the authors feed the character networks through this classifier, discovering that the Chung-Lu model most closely describes the character networks$^{[1]}$.
+\newline\newline
+This article does provide insight into how these undirected networks might be generated; however, the research does have limitations in faithfully modeling character interactions. For instance, the character networks in consideration are all undirected graphs, which best represent symmetric and reciprocal relationships between nodes. However, in film or literature, the relationships between characters may not be symmetric. Character $A$ may speak a lot to character $B$, but character $B$ may only respond with curt replies; such a phenomena could signify heavier importance or higher social standing for character $A$. The paper also does not explicitly describe what character co-occurrence constitutes; for instance, two characters could engage in direct conversation or merely share a one minute window in a film.
+\newline\newline
+To address the concern about undirected edges, we can construct directed character networks by examining raw data, such as movie transcripts. (The authors obtain their movie networks second-hand, through a third party.) Then, we could train a classifier that categorizes directed graphs. 
+
+
+
+\subsection{Null Directed Graph Models}
+Inspired by the information directed networks can provide, Durak et. al. propose a generative process for directed graphs, inspired by the Chung-Lu model mentioned in the previous paper. In \textit{A Scalable Null Model for Directed Graphs Matching All Degree Distributions: In, Out, and Reciprocal}, the authors consider in-degree, out-degree, and reciprocal degree distributions. Given a desired graph in-degree distribution $d$ and out-degree distribution $D$, the edge from node $i$ to node $j$ exists with probability proportional to $D_i\,d_j$. In addition, in order to consider reciprocity (high numbers of edges $(i, j)$ that have $(j, i)$ also existing in the graph), the authors use an undirected Chung-Lu graph model to help evaluate how likely reciprocal edges appear. Eventually, the author combine these factors into a generative process: the Fast Reciprocal Directed generator, or FRD$^{[3]}$.
+\newline\newline
+The article does address how a random model might generate a directed graph, whereas Bonato et al. use only undirected character networks. Indeed, we can approximate properties of a real-world directed network with the proposed FRD model. In addition, the proposed FRD model is fast and scalable -- according to their experiments, producing a multi-million node graph takes less than a minute, which is faster than the models the authors compared to$^{[3]}$.
+\newline\newline
+It is important to note that the primary objective of the article is to maximize ``reciprocal'' edges in the generated graphs. In other words, the authors look for a models whose graphs have many pairs of nodes with directed edges connecting in both directions. Whether this property is valuable for our application depends on the task at hand.
+\newline\newline
+As authors concede, their proposed models are not necessarily realistic; they primarily serve as baselines for producing random networks that share properties with actual networks. These models likely do not capture all important aspects of a character network, so we should take any conclusions from these random graph models with a grain of salt. That said, we may still use the FRD as a ``null model'' in our applications.
+
+
+\subsection{Weighted Random Graph Models}
+On the topic of identifying generative models for character networks, we may also turn to weighted random graph models. In the previous article, the authors choose to adopt unweighted edges on complex graphs; this configuration is akin to having simple graphs with integer edge weights. However, if we wish to model edge weights with continuous values, then we cannot use complex graphs with unweighted edges.
+\newline\newline
+Diego Carlaschelli in \textit{The weighted random graph model} proposes a generalization of the Erdos-Renyi model that generates networks with weighted edges, called the weighted random graph model (WRG)$^{[4]}$. In this model, for a given pair of nodes and a parameter probability $p$, the proposed WRG creates an edge between those nodes with weight $w$ with probability $q(w) = p^w(1-p)$, where a weight of $w = 0$ denotes no edge.
+\newline\newline
+We can see that the proposed graph model is a weighted version of the Erdos-Renyi random model, which we have studied during class. This similarity means that the WRG model shares several limitations with the Erdos-Renyi model. However, as we have mentioned in class, the Erdos-Renyi model functions well as a null model for unweighted undirected graphs$^{[5]}$. Likewise here, the weighted edge graph model can serve well as a baseline, whose sample graphs we can compare to real-world weighted networks.
+\newline\newline
+One other major limitation is that as written, the WRG only applies to graphs with \textit{integer weights}, as the WRG requires the sum $\sum_w p^w (1 - p) = 1$. That said, we may be able to use a different probability distribution over edge weights in order to use real-valued weights.
+\newline\newline
+We can also use the content of this article to formulate other weighted undirected (or directed) random graph models. The main concept of this article is that we can substitute the Bernoulli distribution for the ``weight'' of an edge (where a 0 represents the edge not existing and a 1 represents the edge existing) with a continuous distribution, or at least a probability distribution that takes on more than two values.
+
+
+\section{Project Proposal}
+After considering the above three articles, as well as other related literature, we wish to produce directed character networks based on movie dialog. Then, we wish to determine which random directed graph model is most likely to generate graphs similar to the actual character networks. This problem follows the spirit of Bonato et al., but applies to directed graphs rather than undirected ones.
+
+
+\subsection{Data}
+Our main source of data is a corpus of movie dialogs, obtained from Kaggle. From 617 unique movies with metadata, the authors compiled about 220,000 conversational exchanges between about 9000 total characters across the movies$^{[2]}$. An example of an isolated conversational exchange is:
+\newline\newline
+\begin{tabular}{ l l } 
+PATRICK	& A soft side? Who knew? \\
+KAT	& Yeah well don't let it get out \\
+PATRICK	& So what's your excuse? \\
+KAT	& Acting the way we do. \\
+PATRICK	& Yes \\
+\begin{tabular}{@{}l@{}}KAT \\ . \end{tabular} & \begin{tabular}{@{}l@{}}I don't like to do what people expect. \\ Then they expect it all the time and they get disappointed when you change.\end{tabular} \\
+PATRICK	& So if you disappoint them from the start you're covered?\\
+KAT	& Something like that \\
+PATRICK	& Then you screwed up \\
+KAT	& How? \\
+PATRICK	& You never disappointed me. \\
+\end{tabular}
+\newline\newline
+Note that these conversations occur primarily between two characters rather than occurring between three or more characters.
+
+
+\subsection{Proposed Plan}
+We divide the project into three parts:
+\begin{itemize}
+	\item \textbf{Extracting Social Networks}: from the movie transcripts, we decide what edges ought to represent in each movie's character network. For instance, for a pair of characters $A$ and $B$, we may compute the number of non-stop words uttered by $A$ to $B$, which gives a rough measure of the information transferred from $A$ to $B$.
+	\item \textbf{Training a Graph Classifier}: we first construct samplers from the following graph models, potential along with other directed graph models:
+	\begin{itemize}
+		\item Erdos Renyi on Directed Graphs (each edge exists with a probability $p$)
+		\item Configuration Model for Directed Graphs (in-stubs are randomly paired with out-stubs)
+		\item Fast Directed Reciprocal (FRD) Generator (proposed by Durak et al., see Section 1.2) -- it's worth noting that the nature of conversations results in high reciprocity
+		\item Stochastic Kronecker Graphs (proposed by Leskovec et al., known to satisfy some real-world network properties)
+	\end{itemize}
+	Then, we sample data from each graph model and train a classifier on that data. Given a graph's features, we wish to find which generating model most likely produced that graph. Possible techniques for classification include SVMs, decision trees, and neural networks. To evaluate classification, we use either raw accuracy or F1 score.
+	\item \textbf{Classifying the Character Networks}: finally, we input the character networks into the classifier and determine which graph models produce directed networks that most closely resemble movie character networks. We then infer why we witness this behavior.
+\end{itemize}
+At the very least, we should be able to observe interesting patterns in the directed character networks; however, we should complete all of the above components by the end of the quarter.
+
+
+
+
+\section{References}
+[1] Bonato, A., D’Angelo, D. R., Elenberg, E. R., Gleich, D. F., \& Hou, Y. (2016). ``Mining and modeling character networks.'' In \textit{Algorithms and Models for the Web Graph}: 13th International Workshop, WAW 2016, Montreal, QC, Canada, December 14–15, 2016, Proceedings 13 (pp. 100-114). Springer International Publishing.
+\newline\newline
+[2] Danescu-Niculescu-Mizil, C. (2011) ``Movie Dialog Corpus.'' [Dataset]. Retrieved from Kaggle.
+\newline\newline
+[3] Durak, N., Kolda, T. G., Pinar, A., \& Seshadhri, C. (2013, April). ``A scalable null model for directed graphs matching all degree distributions: In, out, and reciprocal.'' In \textit{Network Science Workshop (NSW)}, 2013 IEEE 2nd (pp. 23-30). IEEE.
+\newline\newline
+[4] Garlaschelli, D. (2009). The weighted random graph model. \textit{New Journal of Physics}, 11(7), 073005.
+\newline\newline
+[5] Leskovec, J. (2017). ``Diameter of $G_{np}$ and the Small-World Phenomenon.'' \textit{Analysis of Networks, Stanford University}.
+\newline\newline
+[6] Leskovec, J., et al. ``Kronecker graphs: An approach to modeling networks.'' \textit{Journal of Machine Learning Research} 11. Feb (2010): 985-1042.
+
+
+\end{document}
