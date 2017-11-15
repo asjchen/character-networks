@@ -112,18 +112,46 @@ class DirectedChungLu(DirectedGraphModel):
                 if random.random() < node1.GetInDeg() * node2.GetOutDeg() / normalizer:
                     self.graph.AddEdge(node1.GetId(), node2.GetId())
 
+class DirectedConfiguration(DirectedGraphModel):
+    def __init__(self, orig_graph):
+        self.name = 'Configuration'
+        num_nodes = orig_graph.GetNodes()
+        num_edges = orig_graph.GetEdges()
+        in_stubs = []
+        out_stubs = []
+        for node in orig_graph.Nodes():
+            in_stubs += [node.GetId()] * node.GetInDeg()
+            out_stubs += [node.GetId()] * node.GetOutDeg()
+        graph_valid = False
+        count = 0
+        while not graph_valid:
+            print count
+            count += 1
+            graph_valid = True
+            self.graph = snap.PNGraph.New()
+            for node in orig_graph.Nodes():
+                self.graph.AddNode(node.GetId())
+            random.shuffle(in_stubs) # only one list needs to be shuffled
+            for i in range(len(in_stubs)):
+                if in_stubs[i] == out_stubs[i] or self.graph.IsEdge(out_stubs[i], in_stubs[i]):
+                    graph_valid = False
+                    break
+                self.graph.AddEdge(out_stubs[i], in_stubs[i])
+
 
 example = snap.PNGraph.New()
-for i in range(1000):
+for i in range(10):
     example.AddNode(i)
-for i in range(1000):
-    for j in range(1000):
+for i in range(10):
+    for j in range(10):
         if random.random() < 0.25:
             example.AddEdge(i, j)
-erdos_renyi = DirectedErdosRenyi(example)
-erdos_renyi.summarize_metrics()
-chung_lu = DirectedChungLu(example)
-chung_lu.summarize_metrics()
+# erdos_renyi = DirectedErdosRenyi(example)
+# erdos_renyi.summarize_metrics()
+# chung_lu = DirectedChungLu(example)
+# chung_lu.summarize_metrics()
+configuration = DirectedConfiguration(example)
+configuration.summarize_metrics()
 
 
 
