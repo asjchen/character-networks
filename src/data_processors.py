@@ -7,7 +7,6 @@ import os
 import re
 import snap
 
-from feature_extractor import get_eigenvalue_distribution
 
 movies_filename = 'movie_titles_metadata.tsv'
 characters_filename = 'movie_characters_metadata.tsv'
@@ -89,15 +88,10 @@ def count_strongly_connected_graphs(graphs):
     print 'Strongly Connected Graphs: {} / {}'.format(count, len(graphs))
     return count
 
-def main():
-    parser = argparse.ArgumentParser(
-        description='Reads and processes the movie dialog data in a given directory')
-    parser.add_argument('data_dir', help='Directory containing the dialog data')
-    args = parser.parse_args()
-
+def get_movie_networks(data_dir):
     movie_to_characters = {}
     id_to_character = {}
-    with open(os.path.join(args.data_dir, characters_filename)) as char_file:
+    with open(os.path.join(data_dir, characters_filename)) as char_file:
         for raw_row in char_file.readlines():
             row = filter_quote_marks(raw_row.strip().split('\t'))
             if len(row) < 6:
@@ -111,7 +105,7 @@ def main():
             id_to_character[character.id] = character
 
     lines = {}
-    with open(os.path.join(args.data_dir, lines_filename)) as lines_file:
+    with open(os.path.join(data_dir, lines_filename)) as lines_file:
         for raw_row in lines_file.readlines():
             row = filter_quote_marks(raw_row.strip().split('\t'))
             if len(row) < 5:
@@ -120,7 +114,7 @@ def main():
             lines[line.id] = line
 
     movie_to_conversations = {}
-    with open(os.path.join(args.data_dir, conversations_filename)) as conv_file:
+    with open(os.path.join(data_dir, conversations_filename)) as conv_file:
         for raw_row in conv_file.readlines():
             row = filter_quote_marks(raw_row.strip().split('\t'))
             if len(row) < 4:
@@ -131,7 +125,7 @@ def main():
             movie_to_conversations[conv.movie_id].append(conv)
 
     movies = {}
-    with open(os.path.join(args.data_dir, movies_filename)) as movies_file:
+    with open(os.path.join(data_dir, movies_filename)) as movies_file:
         for raw_row in movies_file.readlines():
             row = filter_quote_marks(raw_row.strip().split('\t'))
             if len(row) < 6:
@@ -145,9 +139,8 @@ def main():
 
     # count_wasteful_graphs(movie_networks.values())
     # count_strongly_connected_graphs(movie_networks.values())
-    for graph in movie_networks.values():
-        get_eigenvalue_distribution(graph)
+    # for graph in movie_networks.values():
+    #     get_eigenvalue_distribution(graph)
+    return movie_networks
 
 
-if __name__ == '__main__':
-    main()

@@ -16,6 +16,10 @@ class DirectedGraphModel:
         num_nodes = orig_graph.GetNodes()
         num_edges = orig_graph.GetEdges()
         self.graph = snap.PNGraph.New()
+        for node in orig_graph.Nodes():
+            self.graph.AddNode(node.GetId())
+        for edge in orig_graph.Edges():
+            self.graph.AddEdge(edge.GetSrcNId(), edge.GetDstNId())
     
     def summarize_metrics(self):
         print 'Name: {}'.format(self.name)
@@ -111,7 +115,7 @@ class DirectedChungLu(DirectedGraphModel):
                     continue
                 if random.random() < node1.GetInDeg() * node2.GetOutDeg() / normalizer:
                     self.graph.AddEdge(node1.GetId(), node2.GetId())
-
+        
 class DirectedConfiguration(DirectedGraphModel):
     def __init__(self, orig_graph):
         self.name = 'Configuration'
@@ -125,7 +129,6 @@ class DirectedConfiguration(DirectedGraphModel):
         graph_valid = False
         count = 0
         while not graph_valid:
-            print count
             count += 1
             graph_valid = True
             self.graph = snap.PNGraph.New()
@@ -138,20 +141,66 @@ class DirectedConfiguration(DirectedGraphModel):
                     break
                 self.graph.AddEdge(out_stubs[i], in_stubs[i])
 
+class FastDirectedReciprocal(DirectedGraphModel):
+    def __init__(self, orig_graph):
+        self.name = 'FRD'
+        num_nodes = orig_graph.GetNodes()
+        num_edges = orig_graph.GetEdges()
+        self.graph = snap.PNGraph.New()
+        in_stubs = []
+        out_stubs = []
+        recip_stubs = []
+        for node in orig_graph.Nodes():
+            self.graph.AddNode(node.GetId())
+            in_stubs += [node.GetId()] * node.GetInDeg()
+            out_stubs += [node.GetId()] * node.GetOutDeg()
+            for nbr in node.GetOutEdges():
+                if orig_graph.IsEdge(nbr, node.GetId()):
+                    recip_stubs.append(node.GetId())
+        num_recip_edges = 0
+        for node1 in orig_graph.Nodes():
+            for node2 in orig_graph.Nodes():
+                if node1.GetId() == node2.GetId():
+                    continue
+                if orig_graph.IsEdge(node1.GetId(), node2.GetId()) and orig_graph.IsEdge(node2.GetId(), node1.GetId()):
+                    num_recip_edges += 1
+        num_recip_edges /= 2
+        num_single_edges = num_edges - 2 * num_recip_edges
+        for i in range(num_recip_edges):
+            idx1 = random.randint(0, len(recip_stubs) - 1)
+            idx2 = random.randint(0, len(recip_stubs) - 1)
+            # Current Disposal process for self-loops and repeated edges:
+            # just skip that edge
+            if recip_stubs[idx1] == recip_stubs[idx2]:
+                continue
+            self.graph.AddEdge(recip_stubs[idx1], recip_stubs[idx2])
+            self.graph.AddEdge(recip_stubs[idx2], recip_stubs[idx1])
+        for i in range(num_single_edges):
+            idx1 = random.randint(0, len(out_stubs) - 1)
+            idx2 = random.randint(0, len(in_stubs) - 1)
+            # Current Disposal process for self-loops and repeated edges:
+            # just skip that edge
+            if out_stubs[idx1] == in_stubs[idx2]:
+                continue
+            self.graph.AddEdge(out_stubs[idx1], in_stubs[idx2])
 
-example = snap.PNGraph.New()
-for i in range(10):
-    example.AddNode(i)
-for i in range(10):
-    for j in range(10):
-        if random.random() < 0.25:
-            example.AddEdge(i, j)
-# erdos_renyi = DirectedErdosRenyi(example)
-# erdos_renyi.summarize_metrics()
-# chung_lu = DirectedChungLu(example)
-# chung_lu.summarize_metrics()
-configuration = DirectedConfiguration(example)
-configuration.summarize_metrics()
+def main():
+    example = snap.PNGraph.New()
+    for i in range(10):
+        example.AddNode(i)
+    for i in range(10):
+        for j in range(10):
+            if random.random() < 0.25:
+                example.AddEdge(i, j)
+    # erdos_renyi = DirectedErdosRenyi(example)
+    # erdos_renyi.summarize_metrics()
+    # chung_lu = DirectedChungLu(example)
+    # chung_lu.summarize_metrics()
+    configuration = DirectedConfiguration(example)
+    configuration.summarize_metrics()
+
+if __name__ == '__main__':
+    main()
 
 
 
