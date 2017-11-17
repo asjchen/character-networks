@@ -8,7 +8,7 @@ import random
 import graph_generators as gg
 
 
-def train_classifier(x, y, algo='AdaBoost', train_prop=0.8):
+def train_classifier(x, y, algo='SVC', train_prop=0.8):
     if algo == 'SVC':
         classifier = SVC()
     elif algo == 'AdaBoost':
@@ -26,10 +26,9 @@ def train_classifier(x, y, algo='AdaBoost', train_prop=0.8):
 def test_classifier(classifier, test_x):
     return classifier.predict(test_x)
 
-def classify_graph(orig_graph, feature_extractor, samples_per_category=200):
+def classify_graph(orig_graph, feature_extractor, algo='SVC', samples_per_category=100):
     # TODO: make categories global
-    # categories = [gg.DirectedErdosRenyi, gg.DirectedChungLu, gg.DirectedConfiguration]
-    categories = [gg.DirectedErdosRenyi, gg.DirectedChungLu, gg.FastDirectedReciprocal]
+    categories = [gg.DirectedErdosRenyi, gg.DirectedChungLu, gg.FastReciprocalDirected]
     num_categories = len(categories)
     num_features = feature_extractor(orig_graph).shape[0]
 
@@ -47,10 +46,11 @@ def classify_graph(orig_graph, feature_extractor, samples_per_category=200):
     data_x = np.array([data_x[idx] for idx in permutation])
     data_y = np.array([data_y[idx] for idx in permutation])
 
-    classifier, train_accuracy, test_accuracy = train_classifier(data_x, data_y)
+    classifier, train_accuracy, test_accuracy = train_classifier(data_x, data_y, algo=algo)
 
     test_x = np.zeros((1, num_features))
     test_x[0, :] = feature_extractor(orig_graph)
+    print test_x
     numerical_results = test_classifier(classifier, test_x)
     predictions = [categories[i](orig_graph).name for i in range(len(numerical_results))]
     return predictions, train_accuracy, test_accuracy

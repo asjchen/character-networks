@@ -7,7 +7,6 @@ import os
 import re
 import snap
 
-
 movies_filename = 'movie_titles_metadata.tsv'
 characters_filename = 'movie_characters_metadata.tsv'
 conversations_filename = 'movie_conversations.tsv'
@@ -139,8 +138,6 @@ def get_movie_networks(data_dir):
 
     # count_wasteful_graphs(movie_networks.values())
     # count_strongly_connected_graphs(movie_networks.values())
-    # for graph in movie_networks.values():
-    #     get_eigenvalue_distribution(graph)
     return movie_networks
 
 

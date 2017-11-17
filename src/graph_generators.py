@@ -108,13 +108,13 @@ class DirectedChungLu(DirectedGraphModel):
             sum_indegrees += node.GetInDeg()
             sum_outdegrees += node.GetOutDeg()
             sum_doubled_degs += node.GetInDeg() * node.GetOutDeg()
-        normalizer = (sum_indegrees * sum_outdegrees - sum_doubled_degs) / float(num_edges)
+        normalizer = (sum_indegrees * sum_outdegrees - sum_doubled_degs) 
         for node1 in orig_graph.Nodes():
             for node2 in orig_graph.Nodes():
                 if node1.GetId() == node2.GetId():
                     continue
                 if random.random() < node1.GetInDeg() * node2.GetOutDeg() / normalizer:
-                    self.graph.AddEdge(node1.GetId(), node2.GetId())
+                    self.graph.AddEdge(node2.GetId(), node1.GetId())
         
 class DirectedConfiguration(DirectedGraphModel):
     def __init__(self, orig_graph):
@@ -141,7 +141,7 @@ class DirectedConfiguration(DirectedGraphModel):
                     break
                 self.graph.AddEdge(out_stubs[i], in_stubs[i])
 
-class FastDirectedReciprocal(DirectedGraphModel):
+class FastReciprocalDirected(DirectedGraphModel):
     def __init__(self, orig_graph):
         self.name = 'FRD'
         num_nodes = orig_graph.GetNodes()
@@ -183,6 +183,10 @@ class FastDirectedReciprocal(DirectedGraphModel):
             if out_stubs[idx1] == in_stubs[idx2]:
                 continue
             self.graph.AddEdge(out_stubs[idx1], in_stubs[idx2])
+
+# TODO: write preferential attachment here
+
+
 
 def main():
     example = snap.PNGraph.New()

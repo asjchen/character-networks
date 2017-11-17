@@ -3,46 +3,61 @@
 import snap
 import numpy as np
 
+# TODO: this method does not give good accuracy
+def get_k_profiles(graph, k=3):
+    # Find all the possible profiles
+    possible_profiles = []
+    def construct_k_graph(curr_graph, edge_pair):
+        if edge_pair[0] == k:
+            curr_profile = []
+            for i in range(k):
+                curr_profile.append([curr_graph.GetNI(i).GetInDeg(), curr_graph.GetNI(i).GetOutDeg()])
+            curr_profile = sorted(curr_profile)
+            if curr_profile not in possible_profiles:
+                possible_profiles.append(curr_profile)
+        else:
+            new_edge_pair = [edge_pair[0], edge_pair[1] + 1]
+            if new_edge_pair[1] >= k:
+                new_edge_pair[0] += 1
+                new_edge_pair[1] -= k
+            construct_k_graph(curr_graph, new_edge_pair)
+            if edge_pair[0] != edge_pair[1]:
+                curr_graph.AddEdge(edge_pair[0], edge_pair[1])
+                construct_k_graph(curr_graph, new_edge_pair)
+                curr_graph.DelEdge(edge_pair[0], edge_pair[1])
+    k_graph = snap.PNGraph.New()
+    for i in range(k):
+        k_graph.AddNode(i)
+    construct_k_graph(k_graph, [0, 1])
+    profile_props = np.zeros((len(possible_profiles),))
+    node_list = []
+    for node in graph.Nodes():
+        node_list.append(node.GetId())
 
-# Measures Proportion of each type of directed triad
-# def get_3_profiles(graph):
-#     # In-degree, then out degree
-#     possible_profiles = [
-#         [[0, 0], [0, 0], [0, 0]],
-#         [[0, 0], [0, 1], [1, 0]],
-#         [[0, 2], [1, 0], [1, 0]],
-#         [[0, 1], [1, 0], [1, 1]],
+    def gather_k_nodes(curr_nodes):
+        if len(curr_nodes) == k:
+            curr_profile = []
+            for i in range(k):
+                curr_profile.append([0, 0])
+            for idx1 in range(len(curr_nodes)):
+                for idx2 in range(len(curr_nodes)):
+                    if graph.IsEdge(node_list[curr_nodes[idx1]], node_list[curr_nodes[idx2]]):
+                        curr_profile[idx1][1] += 1
+                        curr_profile[idx2][0] += 1
+            curr_profile = sorted(curr_profile)
+            profile_idx = possible_profiles.index(curr_profile)
+            profile_props[profile_idx] += 1.0
+        else:
+            start = 0
+            if len(curr_nodes) > 0:
+                start = curr_nodes[-1]
+            for idx in range(start, len(node_list) - k + 1 + len(curr_nodes)):
+                new_curr_nodes = curr_nodes + [idx]
+                gather_k_nodes(new_curr_nodes)
 
+    gather_k_nodes([])
+    return profile_props / np.sum(profile_props)
 
-#         [[0, 1], [0, 1], [2, 0]],
-#         [[1, 1], [1, 1], [1, 1]],
-#         [[0, 2], [1, 1], [2, 0]],
-
-#     ]
-#     # lots of possibility b/c recriprocal edges
-
-
-#     node_ids = []
-#     for node in graph.Nodes():
-#         node_ids.append(node.GetId())
-#     node_ids = sorted(node_ids)
-#     counts = np.zeros((len(possible_profiles),))
-#     for i in range(len(node_ids)):
-#         for j in range(i + 1, len(node_ids)):
-#             for k in range(j + 1, len(node_ids)):
-#                 curr_profile = [[0, 0], [0, 0], [0, 0]]
-#                 curr_triad = [node_ids[i], node_ids[j], node_ids[k]]
-#                 for idx1 in range(3):
-#                     for idx2 in range(3):
-#                         if graph.IsEdge(curr_triad[idx1], curr_triad[idx2]):
-#                             curr_profile[idx1][1] += 1
-#                             curr_profile[idx2][0] += 1
-#                 curr_profile = sorted(curr_profile)
-#                 for idx in range(len(possible_profiles)):
-#                     if curr_profile == possible_profiles[idx]:
-#                         counts[idx] += 1
-#     counts /= np.sum(counts)
-#     return counts
 
 def get_directed_laplacian(graph):
     n = graph.GetNodes()
