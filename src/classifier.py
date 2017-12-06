@@ -28,7 +28,7 @@ def test_classifier(classifier, test_x):
 
 def classify_graph(orig_graph, feature_extractor, algo='SVC', samples_per_category=100):
     # TODO: make categories global
-    categories = [gg.DirectedErdosRenyi, gg.DirectedChungLu, gg.FastReciprocalDirected]
+    categories = [gg.DirectedErdosRenyi, gg.DirectedChungLu, gg.FastReciprocalDirected, gg.DirectedPreferentialAttachment]
     num_categories = len(categories)
     num_features = feature_extractor(orig_graph).shape[0]
 
@@ -50,7 +50,6 @@ def classify_graph(orig_graph, feature_extractor, algo='SVC', samples_per_catego
 
     test_x = np.zeros((1, num_features))
     test_x[0, :] = feature_extractor(orig_graph)
-    print test_x
     numerical_results = test_classifier(classifier, test_x)
     predictions = [categories[i](orig_graph).name for i in range(len(numerical_results))]
     return predictions, train_accuracy, test_accuracy

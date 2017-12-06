@@ -2,6 +2,7 @@
 
 import snap
 import random
+import numpy as np
 import matplotlib.pyplot as plt
 
 # TODO: for each generator, have a constructor method that takes in the number of nodes and edges
@@ -184,8 +185,21 @@ class FastReciprocalDirected(DirectedGraphModel):
                 continue
             self.graph.AddEdge(out_stubs[idx1], in_stubs[idx2])
 
-# TODO: write preferential attachment here
-
+class DirectedPreferentialAttachment(DirectedGraphModel):
+    def __init__(self, orig_graph, ordered=False, smoothing=0.1):
+        node_ids = []
+        self.graph = snap.PNGraph.New()
+        for node in orig_graph.Nodes():
+            node_ids.append(node.GetId())
+            self.graph.AddNode(node.GetId())
+        random.shuffle(node_ids)
+        for node_id in node_ids:
+            for i in range(orig_graph.GetNI(node_id).GetOutDeg()):
+                cands = [cand for cand in node_ids if cand != node_id and not self.graph.IsEdge(node_id, cand)]
+                weights = [self.graph.GetNI(cand).GetInDeg() + smoothing for cand in cands]
+                weights = [w / float(sum(weights)) for w in weights]
+                neighbor = np.random.choice(cands, p=weights)
+                self.graph.AddEdge(node_id, neighbor)
 
 
 def main():
