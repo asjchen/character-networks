@@ -15,13 +15,6 @@ def underscore_name(name):
 class GraphModel(object):
     def __init__(self, orig_graph):
         self.name = 'Graph'
-        num_nodes = orig_graph.GetNodes()
-        num_edges = orig_graph.GetEdges()
-        self.graph = snap.PNGraph.New()
-        for node in orig_graph.Nodes():
-            self.graph.AddNode(node.GetId())
-        for edge in orig_graph.Edges():
-            self.graph.AddEdge(edge.GetSrcNId(), edge.GetDstNId())
     
     def summarize_metrics(self):
         print 'Name: {}'.format(self.name)
@@ -86,6 +79,13 @@ class DirectedGraphModel(GraphModel):
     def __init__(self, orig_graph):
         super(DirectedGraphModel, self).__init__(orig_graph)
         self.name = 'Directed Graph'
+        num_nodes = orig_graph.GetNodes()
+        num_edges = orig_graph.GetEdges()
+        self.graph = snap.PNGraph.New()
+        for node in orig_graph.Nodes():
+            self.graph.AddNode(node.GetId())
+        for edge in orig_graph.Edges():
+            self.graph.AddEdge(edge.GetSrcNId(), edge.GetDstNId())
 
     def draw_graph(self, name=None):
         # Convert to networkx graph object
@@ -215,37 +215,43 @@ class DirectedPreferentialAttachment(DirectedGraphModel):
 
 class UndirectedMultiGraphModel(GraphModel):
     def __init__(self, orig_graph):
-        super(MultiUndirectedGraphModel, self).__init__(orig_graph)
+        super(UndirectedMultiGraphModel, self).__init__(orig_graph)
         self.name = 'Undirected Multigraph'
+        num_nodes = orig_graph.GetNodes()
+        num_edges = orig_graph.GetEdges()
+        self.graph = snap.TNEANet.New()
+        for node in orig_graph.Nodes():
+            self.graph.AddNode(node.GetId())
+        for edge in orig_graph.Edges():
+            self.graph.AddEdge(edge.GetSrcNId(), edge.GetDstNId())
 
     def draw_graph(self, name=None):
         # Convert to networkx graph object
         nx_graph = nx.MultiGraph()
         nx_graph.add_nodes_from([node.GetId() for node in self.graph.Nodes()])
-        nx_graph.add_edges_from([(edge.GetSrcNId(), edge.GetDstNId()) for edge in self.graph.Edges()])
-        nx.draw(nx_graph)
+        edge_list = sorted([(edge.GetSrcNId(), edge.GetDstNId()) for edge in self.graph.Edges()])
+
+        nx_graph.add_edges_from(edge_list)
+        pos = nx.spring_layout(nx_graph, iterations=50)
+
+        nx.draw_networkx_nodes(nx_graph, pos)
+
+        left_ptr = 0
+        while left_ptr < len(edge_list):
+            right_ptr = left_ptr + 1
+            while right_ptr < len(edge_list) and edge_list[right_ptr] == edge_list[left_ptr]:
+                right_ptr += 1
+            nx.draw_networkx_edges(nx_graph, pos, edgelist=[edge_list[left_ptr]], width=float(right_ptr - left_ptr) / 2)
+            left_ptr = right_ptr
+
         filename = '../bin/{}.png'.format(name if name is not None else self.name)
         plt.savefig(filename)
         plt.close()
 
-
-def main():
-    example = snap.PNGraph.New()
-    for i in range(10):
-        example.AddNode(i)
-    for i in range(10):
-        for j in range(10):
-            if random.random() < 0.25:
-                example.AddEdge(i, j)
-    # erdos_renyi = DirectedErdosRenyi(example)
-    # erdos_renyi.summarize_metrics()
-    # chung_lu = DirectedChungLu(example)
-    # chung_lu.summarize_metrics()
-    configuration = DirectedConfiguration(example)
-    configuration.summarize_metrics()
-
-if __name__ == '__main__':
-    main()
-
-
+class MultiErdosRenyi(UndirectedMultiGraphModel):
+    def __init__(self, orig_graph):
+        self.name = 'Multigraph Erdos Renyi'
+        num_nodes = orig_graph.GetNodes()
+        num_edges = orig_graph.GetEdges()
+        
 

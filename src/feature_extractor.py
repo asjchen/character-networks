@@ -85,7 +85,31 @@ def get_directed_eigenvalue_distribution(graph, num_buckets=10):
     hist, bins = np.histogram(eigenvalues.real, bins=num_buckets, range=(0.0, 2.0))
     return hist / float(np.sum(hist))
     
-def combine_eigen_profiles(graph):
+def combine_directed_eigen_profiles(graph):
     eigen_features = get_directed_eigenvalue_distribution(graph)
     profile_features = get_k_profiles(graph)
     return np.concatenate((eigen_features, profile_features), axis=0)
+
+def get_unnormalized_laplacian(graph):
+    n = graph.GetNodes()
+    laplacian = np.zeros((n, n))
+    node_ids = []
+    node_id_to_idx = {}
+    for node in graph.Nodes():
+        node_id_to_idx[node.GetId()] = len(node_ids)
+        node_ids.append(node.GetId())
+    for i in range(n):
+        laplacian[i, i] = float(graph.GetNI(node_ids[i]).GetOutDeg())
+    for edge in graph.Edges():
+        src_idx = node_id_to_idx[edge.GetSrcNId()]
+        dst_idx = node_id_to_idx[edge.GetDstNId()]
+        laplacian[src_idx][dst_idx] -= 1.0
+    return laplacian
+
+def get_multi_eigenvalue_distribution(graph):
+    laplacian = get_unnormalized_laplacian(graph)
+    print laplacian
+    eigenvalues, eigenvectors = np.linalg.eig(laplacian)
+    print eigenvalues 
+
+

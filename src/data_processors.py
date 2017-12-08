@@ -7,6 +7,8 @@ import os
 import re
 import snap
 
+import graph_generators as gg
+
 movies_filename = 'movie_titles_metadata.tsv'
 characters_filename = 'movie_characters_metadata.tsv'
 conversations_filename = 'movie_conversations.tsv'
@@ -66,12 +68,13 @@ def graph_talks_more_words(movie):
         graph.AddEdge(sorted_char_ids[0], sorted_char_ids[1])
     return graph
 
-def graph_num_conversations_undirected(movie):
+def graph_conversations_undirected(movie):
     graph = snap.TNEANet.New()
     for ch in movie.characters:
         graph.AddNode(ch.id)
     for conv in movie.conversations:
         chars = list(conv.characters)
+        #for j in range(len(conv.lines)):
         graph.AddEdge(chars[0].id, chars[1].id)
         graph.AddEdge(chars[1].id, chars[0].id)
     return graph
@@ -100,7 +103,7 @@ def graph_num_conversations_undirected(movie):
 #     print 'Strongly Connected Graphs: {} / {}'.format(count, len(graphs))
 #     return count
 
-def get_movie_networks(data_dir):
+def get_movie_networks(data_dir, graph_class):
     movie_to_characters = {}
     id_to_character = {}
     with open(os.path.join(data_dir, characters_filename)) as char_file:
@@ -146,8 +149,12 @@ def get_movie_networks(data_dir):
             movies[mov.id] = mov
 
     movie_networks = {}
-    for movie_id in movies:
-        movie_networks[movie_id] = graph_talks_more_words(movies[movie_id])
+    if graph_class == gg.DirectedGraphModel:
+        for movie_id in movies:
+            movie_networks[movie_id] = graph_talks_more_words(movies[movie_id])
+    elif graph_class == gg.UndirectedMultiGraphModel:
+        for movie_id in movies:
+            movie_networks[movie_id] = graph_conversations_undirected(movies[movie_id])
 
     # count_wasteful_graphs(movie_networks.values())
     # count_strongly_connected_graphs(movie_networks.values())

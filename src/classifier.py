@@ -28,9 +28,15 @@ def train_classifier(x, y, algo='SVC', train_prop=0.8):
 def test_classifier(classifier, test_x):
     return classifier.predict(test_x)
 
-def classify_graph(orig_graph, feature_extractor, algo='SVC', samples_per_category=100, draw_graphs=False):
+def classify_graph(orig_graph, graph_class, feature_extractor, algo='SVC', samples_per_category=100, draw_graphs=False):
     # TODO: make categories global
-    categories = [gg.DirectedErdosRenyi, gg.DirectedChungLu, gg.FastReciprocalDirected, gg.DirectedPreferentialAttachment]
+    
+    categories = []
+    if graph_class == gg.DirectedGraphModel:
+        categories = [gg.DirectedErdosRenyi, gg.DirectedChungLu, \
+            gg.FastReciprocalDirected, gg.DirectedPreferentialAttachment]
+    elif graph_class == gg.UndirectedMultiGraphModel:
+        categories = []
     num_categories = len(categories)
     num_features = feature_extractor(orig_graph).shape[0]
 
@@ -38,7 +44,7 @@ def classify_graph(orig_graph, feature_extractor, algo='SVC', samples_per_catego
     data_y = np.zeros((num_categories * samples_per_category,))
 
     if draw_graphs:
-        orig_graph_obj = gg.DirectedGraphModel(orig_graph)
+        orig_graph_obj = graph_class(orig_graph)
         orig_graph_obj.draw_graph()
     for c in range(num_categories):
         for i in range(samples_per_category):
