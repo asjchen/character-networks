@@ -4,6 +4,8 @@ from sklearn.svm import SVC
 from sklearn.ensemble import AdaBoostClassifier
 import numpy as np
 import random
+import matplotlib.pyplot as plt
+import networkx as nx
 
 import graph_generators as gg
 
@@ -26,7 +28,7 @@ def train_classifier(x, y, algo='SVC', train_prop=0.8):
 def test_classifier(classifier, test_x):
     return classifier.predict(test_x)
 
-def classify_graph(orig_graph, feature_extractor, algo='SVC', samples_per_category=100):
+def classify_graph(orig_graph, feature_extractor, algo='SVC', samples_per_category=100, draw_graphs=False):
     # TODO: make categories global
     categories = [gg.DirectedErdosRenyi, gg.DirectedChungLu, gg.FastReciprocalDirected, gg.DirectedPreferentialAttachment]
     num_categories = len(categories)
@@ -35,10 +37,17 @@ def classify_graph(orig_graph, feature_extractor, algo='SVC', samples_per_catego
     data_x = np.zeros((num_categories * samples_per_category, num_features))
     data_y = np.zeros((num_categories * samples_per_category,))
 
+    if draw_graphs:
+        orig_graph_obj = gg.DirectedGraphModel(orig_graph)
+        orig_graph_obj.draw_graph()
     for c in range(num_categories):
         for i in range(samples_per_category):
-            new_graph = categories[c](orig_graph).graph
-            data_x[samples_per_category * c + i, :] = feature_extractor(new_graph)
+            new_directed_graph = categories[c](orig_graph)
+            if draw_graphs:
+                new_directed_graph.draw_graph()
+                if i == 0:
+                    new_directed_graph.summarize_metrics()
+            data_x[samples_per_category * c + i, :] = feature_extractor(new_directed_graph.graph)
             data_y[samples_per_category * c + i] = c
 
     permutation = range(len(data_x))

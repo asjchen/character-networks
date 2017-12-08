@@ -51,6 +51,7 @@ class Movie:
         self.characters = movie_to_characters[self.id]
         self.conversations = movie_to_conversations[self.id]
 
+
 # Creating character networks
 # TODO: better metric for measuring conversation dynamics
 def graph_talks_more_words(movie):
@@ -65,27 +66,39 @@ def graph_talks_more_words(movie):
         graph.AddEdge(sorted_char_ids[0], sorted_char_ids[1])
     return graph
 
-def count_wasteful_graphs(graphs):
-    count = 0
-    for graph in graphs:
-        is_wasteful = False
-        for node in graph.Nodes():
-            if node.GetInDeg() == 0 and node.GetOutDeg() == 0:
-                is_wasteful = True
-        if is_wasteful:
-            count += 1
-    print 'Wasteful Graphs: {} / {}'.format(count, len(graphs))
-    return count
+def graph_num_conversations_undirected(movie):
+    graph = snap.TNEANet.New()
+    for ch in movie.characters:
+        graph.AddNode(ch.id)
+    for conv in movie.conversations:
+        chars = list(conv.characters)
+        graph.AddEdge(chars[0].id, chars[1].id)
+        graph.AddEdge(chars[1].id, chars[0].id)
+    return graph
 
-def count_strongly_connected_graphs(graphs):
-    count = 0
-    for graph in graphs:
-        components = snap.TCnComV()
-        snap.GetSccs(graph, components)
-        if components.Len() == 1:
-            count += 1
-    print 'Strongly Connected Graphs: {} / {}'.format(count, len(graphs))
-    return count
+
+
+# def count_wasteful_graphs(graphs):
+#     count = 0
+#     for graph in graphs:
+#         is_wasteful = False
+#         for node in graph.Nodes():
+#             if node.GetInDeg() == 0 and node.GetOutDeg() == 0:
+#                 is_wasteful = True
+#         if is_wasteful:
+#             count += 1
+#     print 'Wasteful Graphs: {} / {}'.format(count, len(graphs))
+#     return count
+
+# def count_strongly_connected_graphs(graphs):
+#     count = 0
+#     for graph in graphs:
+#         components = snap.TCnComV()
+#         snap.GetSccs(graph, components)
+#         if components.Len() == 1:
+#             count += 1
+#     print 'Strongly Connected Graphs: {} / {}'.format(count, len(graphs))
+#     return count
 
 def get_movie_networks(data_dir):
     movie_to_characters = {}

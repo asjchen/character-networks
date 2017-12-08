@@ -48,10 +48,10 @@ def get_k_profiles(graph, k=2):
             profile_idx = possible_profiles.index(curr_profile)
             profile_props[profile_idx] += 1.0
         else:
-            start = 0
+            start = -1
             if len(curr_nodes) > 0:
                 start = curr_nodes[-1]
-            for idx in range(start, len(node_list) - k + 1 + len(curr_nodes)):
+            for idx in range(start + 1, len(node_list) - k + 1 + len(curr_nodes)):
                 new_curr_nodes = curr_nodes + [idx]
                 gather_k_nodes(new_curr_nodes)
 
@@ -85,3 +85,7 @@ def get_eigenvalue_distribution(graph, num_buckets=10):
     hist, bins = np.histogram(eigenvalues.real, bins=num_buckets, range=(0.0, 2.0))
     return hist / float(np.sum(hist))
     
+def combine_eigen_profiles(graph):
+    eigen_features = get_eigenvalue_distribution(graph)
+    profile_features = get_k_profiles(graph)
+    return np.concatenate((eigen_features, profile_features), axis=0)

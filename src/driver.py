@@ -4,7 +4,7 @@ import argparse
 
 from data_processors import get_movie_networks
 from classifier import classify_graph
-from feature_extractor import get_eigenvalue_distribution, get_k_profiles
+import feature_extractor as fe
 from graph_generators import DirectedGraphModel
 
 def main():
@@ -22,9 +22,12 @@ def main():
     all_predictions = []
     for i in range(len(small_sample)):
         print i
-        DirectedGraphModel(small_sample[i]).summarize_metrics()
+        if i == 0:
+            DirectedGraphModel(small_sample[i]).summarize_metrics()
+        draw_graphs = (i == 0)
         predictions, train_accuracy, test_accuracy = classify_graph( \
-            small_sample[i], get_eigenvalue_distribution, algo=args.classifier)
+            small_sample[i], fe.combine_eigen_profiles, algo=args.classifier,
+            draw_graphs=draw_graphs)
         # predictions, train_accuracy, test_accuracy = classify_graph( \
         #     small_sample[i], get_k_profiles, algo=args.classifier)
         mean_train_accuracy += train_accuracy / len(small_sample)
