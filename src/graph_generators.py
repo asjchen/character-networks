@@ -205,10 +205,11 @@ class DirectedPreferentialAttachment(DirectedGraphModel):
                 cands = [cand for cand in node_ids if cand != node_id and not self.graph.IsEdge(node_id, cand)]
                 weights = [self.graph.GetNI(cand).GetInDeg() for cand in cands]
                 if random.random() < prob_uniform or sum(weights) == 0:
-                    neighbor = node_ids[random.randint(0, len(cands) - 1)]
+                    neighbor = cands[random.randint(0, len(cands) - 1)]
                 else:
                     weights = [w / float(sum(weights)) for w in weights]
                     neighbor = np.random.choice(cands, p=weights)
+                #print '{} {}'.format(node_id, neighbor)
                 self.graph.AddEdge(node_id, neighbor)
 
 
@@ -226,7 +227,7 @@ class UndirectedMultiGraphModel(GraphModel):
         filename = '../bin/{}.png'.format(name if name is not None else self.name)
         plt.savefig(filename)
         plt.close()
-        
+
 
 def main():
     example = snap.PNGraph.New()

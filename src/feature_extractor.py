@@ -4,6 +4,7 @@ import snap
 import numpy as np
 
 # TODO: this method does not give good accuracy
+# Only for unweighted directed graphs
 def get_k_profiles(graph, k=2):
     # Find all the possible profiles
     possible_profiles = []
@@ -58,7 +59,6 @@ def get_k_profiles(graph, k=2):
     gather_k_nodes([])
     return profile_props / np.sum(profile_props)
 
-
 def get_directed_laplacian(graph):
     n = graph.GetNodes()
     laplacian = np.zeros((n, n))
@@ -79,13 +79,13 @@ def get_directed_laplacian(graph):
     return laplacian
 
 # Make eigenvalue distribution off of Laplacian matrix
-def get_eigenvalue_distribution(graph, num_buckets=10):
+def get_directed_eigenvalue_distribution(graph, num_buckets=10):
     laplacian = get_directed_laplacian(graph)
     eigenvalues, eigenvectors = np.linalg.eig(laplacian)
     hist, bins = np.histogram(eigenvalues.real, bins=num_buckets, range=(0.0, 2.0))
     return hist / float(np.sum(hist))
     
 def combine_eigen_profiles(graph):
-    eigen_features = get_eigenvalue_distribution(graph)
+    eigen_features = get_directed_eigenvalue_distribution(graph)
     profile_features = get_k_profiles(graph)
     return np.concatenate((eigen_features, profile_features), axis=0)
