@@ -79,7 +79,7 @@ def get_directed_laplacian(graph):
     return laplacian
 
 # Make eigenvalue distribution off of Laplacian matrix
-def get_directed_eigenvalue_distribution(graph, num_buckets=10):
+def get_directed_eigenvalue_distribution(graph, num_buckets=20):
     laplacian = get_directed_laplacian(graph)
     eigenvalues, eigenvectors = np.linalg.eig(laplacian)
     hist, bins = np.histogram(eigenvalues.real, bins=num_buckets, range=(0.0, 2.0))
@@ -106,10 +106,13 @@ def get_unnormalized_laplacian(graph):
         laplacian[src_idx][dst_idx] -= 1.0
     return laplacian
 
-def get_multi_eigenvalue_distribution(graph):
+def get_multi_eigenvalue_distribution(graph, num_buckets=20):
     laplacian = get_unnormalized_laplacian(graph)
-    print laplacian
+    for i in range(laplacian.shape[0]):
+        if laplacian[i, i] != 0:
+            laplacian[i, :] /= laplacian[i, i]
     eigenvalues, eigenvectors = np.linalg.eig(laplacian)
-    print eigenvalues 
+    hist, bins = np.histogram(eigenvalues.real, bins=num_buckets, range=(0.0, 2.0))
+    return hist / float(np.sum(hist))
 
 

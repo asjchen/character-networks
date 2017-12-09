@@ -23,7 +23,7 @@ def main():
         graph_class = gg.DirectedGraphModel
 
     movie_networks = get_movie_networks(args.data_dir, graph_class)
-    small_sample = movie_networks.values()[:100]
+    small_sample = movie_networks.values()[:20]
     mean_train_accuracy = 0.0
     mean_test_accuracy = 0.0
     all_predictions = []
@@ -34,7 +34,7 @@ def main():
         draw_graphs = (i == 0)
 
         predictions, train_accuracy, test_accuracy = classify_graph( \
-          small_sample[i], graph_class, fe.combine_directed_eigen_profiles, 
+          small_sample[i], graph_class, fe.get_multi_eigenvalue_distribution, 
           algo=args.classifier, draw_graphs=draw_graphs)
 
         mean_train_accuracy += train_accuracy / len(small_sample)

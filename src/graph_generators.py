@@ -283,7 +283,7 @@ class MultiErdosRenyi(UndirectedMultiGraphModel):
     def __init__(self, orig_graph):
         self.name = 'Multigraph Erdos Renyi'
         num_nodes = orig_graph.GetNodes()
-        num_edges = orig_graph.GetEdges()
+        num_edges = orig_graph.GetEdges() / 2
         node_list = []
         self.graph = snap.TNEANet.New()
         for node in orig_graph.Nodes():
@@ -295,6 +295,7 @@ class MultiErdosRenyi(UndirectedMultiGraphModel):
             while idx2 == idx1:
                 idx2 = random.randint(0, len(node_list) - 1)
             self.graph.AddEdge(node_list[idx1], node_list[idx2])
+            self.graph.AddEdge(node_list[idx2], node_list[idx1])
         self.create_nx_graph()
 
 # Recall that while TNEANet yields directed graphs, 
@@ -302,7 +303,7 @@ class MultiChungLu(UndirectedMultiGraphModel):
     def __init__(self, orig_graph):
         self.name = 'Multigraph Chung Lu'
         num_nodes = orig_graph.GetNodes()
-        num_edges = orig_graph.GetEdges()
+        num_edges = orig_graph.GetEdges() / 2
         self.graph = snap.TNEANet.New()
         node_list = []
         deg_dist = []

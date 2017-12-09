@@ -51,21 +51,21 @@ def classify_graph(orig_graph, graph_class, feature_extractor, algo='SVC', sampl
                 new_directed_graph.draw_graph(orig_graph_obj.nx_pos)
                 if i == 0:
                     new_directed_graph.summarize_metrics()
-            # data_x[samples_per_category * c + i, :] = feature_extractor(new_directed_graph.graph)
-            # data_y[samples_per_category * c + i] = c
+            data_x[samples_per_category * c + i, :] = feature_extractor(new_directed_graph.graph)
+            data_y[samples_per_category * c + i] = c
 
-    # permutation = range(len(data_x))
-    # random.shuffle(permutation)
-    # data_x = np.array([data_x[idx] for idx in permutation])
-    # data_y = np.array([data_y[idx] for idx in permutation])
+    permutation = range(len(data_x))
+    random.shuffle(permutation)
+    data_x = np.array([data_x[idx] for idx in permutation])
+    data_y = np.array([data_y[idx] for idx in permutation])
 
-    # classifier, train_accuracy, test_accuracy = train_classifier(data_x, data_y, algo=algo)
+    classifier, train_accuracy, test_accuracy = train_classifier(data_x, data_y, algo=algo)
 
-    # test_x = np.zeros((1, num_features))
-    # test_x[0, :] = feature_extractor(orig_graph)
-    # numerical_results = test_classifier(classifier, test_x)
-    # predictions = [categories[i](orig_graph).name for i in range(len(numerical_results))]
-    # return predictions, train_accuracy, test_accuracy
+    test_x = np.zeros((1, num_features))
+    test_x[0, :] = feature_extractor(orig_graph)
+    numerical_results = test_classifier(classifier, test_x)
+    predictions = [categories[i](orig_graph).name for i in range(len(numerical_results))]
+    return predictions, train_accuracy, test_accuracy
 
 
 
