@@ -5,7 +5,7 @@ import numpy as np
 
 # TODO: this method does not give good accuracy
 # Only for unweighted directed graphs
-def get_k_profiles(graph, k=2):
+def get_k_profiles(graph, k=3):
     # Find all the possible profiles
     possible_profiles = []
     def construct_k_graph(curr_graph, edge_pair):

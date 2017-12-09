@@ -23,7 +23,7 @@ def main():
         graph_class = gg.DirectedGraphModel
 
     movie_networks = get_movie_networks(args.data_dir, graph_class)
-    small_sample = movie_networks.values()[:20]
+    small_sample = movie_networks.values()[:100]
     mean_train_accuracy = 0.0
     mean_test_accuracy = 0.0
     all_predictions = []
