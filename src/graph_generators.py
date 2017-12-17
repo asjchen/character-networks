@@ -6,8 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 
-# TODO: for each generator, have a constructor method that takes in the number of nodes and edges
-# also has checker methods that output properties (for debugging mostly)
+# TODO: reduce redundant code in various constructors
 
 def underscore_name(name):
     return '_'.join(name.lower().split())
@@ -72,7 +71,6 @@ class GraphModel(object):
 
 
     # average shortest path
-    # size of largest connected component
 
 
 class DirectedGraphModel(GraphModel):
@@ -256,6 +254,8 @@ class UndirectedMultiGraphModel(GraphModel):
             nx.draw_networkx_edges(self.nx_graph, nx_pos, edgelist=[edge_list[left_ptr]], width=float(right_ptr - left_ptr) / 2)
             left_ptr = right_ptr
 
+        plt.xlim(-0.1, 1.1)
+        plt.ylim(-0.1, 1.1)
         filename = '../bin/{}.png'.format(name if name is not None else self.name)
         plt.savefig(filename)
         plt.close()
@@ -324,5 +324,29 @@ class MultiChungLu(UndirectedMultiGraphModel):
             self.graph.AddEdge(edge_list[edge_idx][0], edge_list[edge_idx][1])
             self.graph.AddEdge(edge_list[edge_idx][1], edge_list[edge_idx][0])
         self.create_nx_graph()
+
+class MultiPreferentialAttachment(UndirectedMultiGraphModel):
+    def __init__(self, orig_graph, smoothing=0.5):
+        self.name = 'Multigraph Preferential Attachment'
+        num_nodes = orig_graph.GetNodes()
+        num_edges = orig_graph.GetEdges() / 2
+        self.graph = snap.TNEANet.New()
+        node_weights = {}
+        for node in orig_graph.Nodes():
+            self.graph.AddNode(node.GetId())
+            node_weights[node.GetId()] = smoothing
+        node_sequence = []
+        for _ in range(2 * num_edges):
+            node_list = node_weights.keys()
+            normalizer = sum(node_weights.values())
+            node_probs = [node_weights[node_id] / normalizer for node_id in node_list]
+            idx = np.random.choice(len(node_list), p=node_probs)
+            node_sequence.append(node_list[idx])
+            node_weights[node_list[idx]] += 1.0
+        for i in range(num_edges):
+            self.graph.AddEdge(node_sequence[2 * i], node_sequence[2 * i + 1])
+            self.graph.AddEdge(node_sequence[2 * i + 1], node_sequence[2 * i])
+        self.create_nx_graph()
+
 
 

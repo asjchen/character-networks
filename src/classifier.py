@@ -2,6 +2,9 @@
 
 from sklearn.svm import SVC
 from sklearn.ensemble import AdaBoostClassifier
+from sklearn.metrics import confusion_matrix
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.linear_model import SGDClassifier
 import numpy as np
 import random
 import matplotlib.pyplot as plt
@@ -15,6 +18,10 @@ def train_classifier(x, y, algo='SVC', train_prop=0.8):
         classifier = SVC()
     elif algo == 'AdaBoost':
         classifier = AdaBoostClassifier()
+    elif algo == 'KNeighbors':
+        classifier = KNeighborsClassifier()
+    elif algo == 'SGD':
+        classifier = SGDClassifier()
     num_train = int(train_prop * x.shape[0])
     train_x = x[: num_train, :]
     train_y = y[: num_train]
@@ -23,6 +30,7 @@ def train_classifier(x, y, algo='SVC', train_prop=0.8):
     test_x = x[num_train: , :]
     test_y = y[num_train: ]
     test_accuracy = classifier.score(test_x, test_y)
+    # print confusion_matrix(test_y, classifier.predict(test_x))
     return classifier, train_accuracy, test_accuracy
 
 def test_classifier(classifier, test_x):
@@ -34,7 +42,8 @@ def classify_graph(orig_graph, graph_class, feature_extractor, algo='SVC', sampl
         categories = [gg.DirectedErdosRenyi, gg.DirectedChungLu, \
             gg.FastReciprocalDirected, gg.DirectedPreferentialAttachment]
     elif graph_class == gg.UndirectedMultiGraphModel:
-        categories = [gg.MultiConfiguration, gg.MultiErdosRenyi, gg.MultiChungLu]
+        categories = [gg.MultiPreferentialAttachment, gg.MultiConfiguration, \
+            gg.MultiErdosRenyi, gg.MultiChungLu]
     num_categories = len(categories)
     num_features = feature_extractor(orig_graph).shape[0]
 
@@ -64,7 +73,8 @@ def classify_graph(orig_graph, graph_class, feature_extractor, algo='SVC', sampl
     test_x = np.zeros((1, num_features))
     test_x[0, :] = feature_extractor(orig_graph)
     numerical_results = test_classifier(classifier, test_x)
-    predictions = [categories[i](orig_graph).name for i in range(len(numerical_results))]
+    predictions = [categories[int(numerical_results[i])](orig_graph).name for i in range(len(numerical_results))]
+
     return predictions, train_accuracy, test_accuracy
 
 

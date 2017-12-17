@@ -115,4 +115,51 @@ def get_multi_eigenvalue_distribution(graph, num_buckets=20):
     hist, bins = np.histogram(eigenvalues.real, bins=num_buckets, range=(0.0, 2.0))
     return hist / float(np.sum(hist))
 
+def get_histogram(values, num_buckets=10):
+    if len(values) == 0:
+        return np.full((num_buckets,), 0.0)
+    min_value = min(values)
+    max_value = max(values)
+    hist = np.full((num_buckets,), 1.0)
+    if min_value != max_value:
+        normed_values = [float(x - min_value) / (max_value - min_value) for x in values]
+        hist, bins = np.histogram(normed_values, bins=num_buckets, range=(0.0, 1.0))
+    return hist / float(np.sum(hist))
+
+def get_betweenness_centrality_dist(graph, num_buckets=10):
+    node_cent = snap.TIntFltH()
+    edge_cent = snap.TIntPrFltH()
+    snap.GetBetweennessCentr(graph, node_cent, edge_cent, 1.0)
+    node_betweenness = []
+    edge_betweenness = []
+    for node in node_cent:
+        node_betweenness.append(node_cent[node])
+    for edge in edge_cent:
+        edge_betweenness.append(edge_cent[edge])
+    node_hist = get_histogram(node_betweenness, num_buckets=num_buckets)
+    edge_hist = get_histogram(edge_betweenness, num_buckets=num_buckets)
+    return np.concatenate((node_hist, edge_hist), axis=0)
+
+def get_node_centrality_stats(graph):
+    cluster_coeff = snap.GetClustCf(graph)
+    min_ecc = graph.GetNodes() + 1
+    max_ecc = 0
+    for node in graph.Nodes():
+        ecc = snap.GetNodeEcc(graph, node.GetId())
+        min_ecc = min(ecc, min_ecc)
+        max_ecc = max(ecc, max_ecc)
+    return np.array([cluster_coeff, max_ecc, min_ecc])
+
+def get_pagerank_dist(graph):
+    node_pagerank = snap.TIntFltH()
+    snap.GetPageRank(graph, node_pagerank)
+    return get_histogram([node_pagerank[node] for node in node_pagerank])
+
+def get_multigraph_features(graph, num_cent_buckets=10, num_eigen_buckets=20):
+    between_features = get_betweenness_centrality_dist(graph, num_buckets=num_cent_buckets)
+    eigen_features = get_multi_eigenvalue_distribution(graph, num_buckets=num_eigen_buckets)
+    centrality_features = get_node_centrality_stats(graph)
+    pagerank_features = get_pagerank_dist(graph)
+    return np.concatenate((between_features, eigen_features), axis=0)
+
 

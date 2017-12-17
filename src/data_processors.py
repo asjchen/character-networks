@@ -49,7 +49,7 @@ class Movie:
         self.year = int(re.sub(r'[^0-9]', '', raw_row[2]))
         self.imdb_rating = float(raw_row[3])
         self.imdb_votes = int(raw_row[4])
-        self.genres = ast.literal_eval(raw_row[5])
+        self.genres = ast.literal_eval(re.sub('\' \'', '\',\'', raw_row[5]))
         self.characters = movie_to_characters[self.id]
         self.conversations = movie_to_conversations[self.id]
 
@@ -158,6 +158,6 @@ def get_movie_networks(data_dir, graph_class):
 
     # count_wasteful_graphs(movie_networks.values())
     # count_strongly_connected_graphs(movie_networks.values())
-    return movie_networks
+    return movies, movie_networks
 
 

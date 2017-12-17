@@ -1,6 +1,7 @@
 # Driver
 
 import argparse
+import random
 
 from data_processors import get_movie_networks
 from classifier import classify_graph
@@ -22,8 +23,11 @@ def main():
     elif args.graph_type == 'directed':
         graph_class = gg.DirectedGraphModel
 
-    movie_networks = get_movie_networks(args.data_dir, graph_class)
-    small_sample = movie_networks.values()[:20]
+    movies, movie_networks = get_movie_networks(args.data_dir, graph_class)
+    randomized_keys = movie_networks.keys()
+    random.shuffle(randomized_keys)
+    small_indices = randomized_keys[:20]
+    small_sample = [movie_networks[i] for i in small_indices]
     mean_train_accuracy = 0.0
     mean_test_accuracy = 0.0
     all_predictions = []
@@ -31,11 +35,14 @@ def main():
         print i
         if i == 0:
             graph_class(small_sample[i]).summarize_metrics()
-        draw_graphs = (i == 0)
+        #draw_graphs = (i == 0)
+        draw_graphs=False
 
         predictions, train_accuracy, test_accuracy = classify_graph( \
-          small_sample[i], graph_class, fe.get_multi_eigenvalue_distribution, 
+          small_sample[i], graph_class, fe.get_multigraph_features, 
           algo=args.classifier, draw_graphs=draw_graphs)
+
+        print '{}'.format(test_accuracy)
 
         mean_train_accuracy += train_accuracy / len(small_sample)
         mean_test_accuracy += test_accuracy / len(small_sample)
