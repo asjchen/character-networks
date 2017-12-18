@@ -2,6 +2,7 @@
 
 import argparse
 import random
+import os
 
 from data_processors import get_movie_networks
 from classifier import classify_graph
@@ -37,6 +38,12 @@ def main():
         graph_class = gg.UndirectedMultiGraphModel
     elif args.graph_type == 'directed':
         graph_class = gg.DirectedGraphModel
+
+    # Make bin directory if it doesn't exist
+    project_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    bin_dir = os.path.join(project_dir, 'bin')
+    if not os.path.isdir(bin_dir):
+        os.mkdir(bin_dir)
 
     movies, movie_networks = get_movie_networks(args.data_dir, graph_class)
     randomized_keys = movie_networks.keys()
