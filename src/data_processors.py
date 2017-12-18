@@ -1,4 +1,12 @@
-# Processing Movie Lines Data
+# Classes and functions for processing the movie dialogue data from the Kaggle
+# data set, provided by Cornell University (URL to Kaggle source: 
+# https://www.kaggle.com/Cornell-University/movie-dialog-corpus)
+# These functions help convert the data into a character network for each movie
+
+# Currently, the directed character networks are based on whether character B
+# has ever talked more than character A in a conversation. The multigraph 
+# chracter networks represent individual conversations, with one edge between
+# characters A and B for each conversation they have had
 
 import ast
 import argparse
@@ -36,7 +44,8 @@ class Line:
 
 class Conversation:
     def __init__(self, raw_row, characters, lines):
-        self.characters = set([characters[int(raw_row[0][1:])], characters[int(raw_row[1][1:])]])
+        self.characters = set([characters[int(raw_row[0][1:])], 
+            characters[int(raw_row[1][1:])]])
         self.movie_id = int(raw_row[2][1:])
         self.lines = [lines[int(line_id[1:])] for line_id \
             in ast.literal_eval(re.sub('\' \'', '\',\'', raw_row[3]))]
@@ -54,7 +63,6 @@ class Movie:
         self.conversations = movie_to_conversations[self.id]
 
 
-# Creating character networks
 # TODO: better metric for measuring conversation dynamics
 def graph_talks_more_words(movie):
     graph = snap.PNGraph.New()
@@ -64,7 +72,8 @@ def graph_talks_more_words(movie):
         word_counts = {ch.id: 0 for ch in conv.characters}
         for line in conv.lines:
             word_counts[line.character.id] += len(line.text.split())
-        sorted_char_ids = sorted(word_counts.keys(), key=lambda ch_id: word_counts[ch_id])
+        sorted_char_ids = sorted(word_counts.keys(), 
+            key=lambda ch_id: word_counts[ch_id])
         graph.AddEdge(sorted_char_ids[0], sorted_char_ids[1])
     return graph
 
@@ -78,30 +87,6 @@ def graph_conversations_undirected(movie):
         graph.AddEdge(chars[0].id, chars[1].id)
         graph.AddEdge(chars[1].id, chars[0].id)
     return graph
-
-
-
-# def count_wasteful_graphs(graphs):
-#     count = 0
-#     for graph in graphs:
-#         is_wasteful = False
-#         for node in graph.Nodes():
-#             if node.GetInDeg() == 0 and node.GetOutDeg() == 0:
-#                 is_wasteful = True
-#         if is_wasteful:
-#             count += 1
-#     print 'Wasteful Graphs: {} / {}'.format(count, len(graphs))
-#     return count
-
-# def count_strongly_connected_graphs(graphs):
-#     count = 0
-#     for graph in graphs:
-#         components = snap.TCnComV()
-#         snap.GetSccs(graph, components)
-#         if components.Len() == 1:
-#             count += 1
-#     print 'Strongly Connected Graphs: {} / {}'.format(count, len(graphs))
-#     return count
 
 def get_movie_networks(data_dir, graph_class):
     movie_to_characters = {}
@@ -154,10 +139,12 @@ def get_movie_networks(data_dir, graph_class):
             movie_networks[movie_id] = graph_talks_more_words(movies[movie_id])
     elif graph_class == gg.UndirectedMultiGraphModel:
         for movie_id in movies:
-            movie_networks[movie_id] = graph_conversations_undirected(movies[movie_id])
+            movie_networks[movie_id] = graph_conversations_undirected(
+                movies[movie_id])
+    else:
+        raise Exception(('graph_class parameter must be either '
+            'DirectedGraphModel or UndirectedMultiGraphModel'))
 
-    # count_wasteful_graphs(movie_networks.values())
-    # count_strongly_connected_graphs(movie_networks.values())
     return movies, movie_networks
 
 

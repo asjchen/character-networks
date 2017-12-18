@@ -29,6 +29,7 @@ def main():
     # TODO: option to print results to csv
     # TODO: add requirements.txt
     # TODO: add verbose flag
+    # TODO: add option to select multiple features and have functions to combine them
     args = parser.parse_args()
 
     graph_class = gg.GraphModel
