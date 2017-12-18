@@ -3,6 +3,7 @@
 import argparse
 import random
 import os
+import csv
 
 from data_processors import get_movie_networks
 from classifier import classify_graph
@@ -13,7 +14,7 @@ def main():
     parser = argparse.ArgumentParser(
         description=('Reads and converts movie dialog data to character '
             'networks, which are then classified as one of several random '
-            'graph models'))
+            'graph models (see README for more details)'))
     parser.add_argument('data_dir', help='Directory containing dialog data')
     parser.add_argument('--classifier', '-c', default='SVC', 
         help='Classifier algorithm: choose between SVC or Adaboost')
@@ -26,10 +27,15 @@ def main():
     parser.add_argument('--sample', '-s', type=int, 
         help=('Randomly choose a sample of the specified number of '
             'movies to evaluate'))
-    # TODO: option to draw the first graph
-    # TODO: option to print results to csv
-    # TODO: add requirements.txt
-    # TODO: add verbose flag
+    parser.add_argument('--draw_examples', '-d', action='store_true',
+        help=('Draws examples of each random graph model, derived from '
+        'the same character network'))
+    parser.add_argument('--verbose', '-v', action='store_true', 
+        help=('Print iteration numbers and summary metrics for each '
+            'character network and its generated random graphs'))
+    parser.add_argument('--output_predictions', '-o', 
+        help=('Filename of CSV to store the labels of the movie '
+            'character networks'))
     # TODO: add option to select multiple features and have functions to combine them
     args = parser.parse_args()
 
@@ -55,27 +61,37 @@ def main():
     movie_sample = [movie_networks[i] for i in sample_indices]
     mean_train_accuracy = 0.0
     mean_test_accuracy = 0.0
-    all_predictions = []
+    all_predictions = {}
     for i in range(len(movie_sample)):
-        # TODO: only print when verbose
-        print i
-        if i == 0:
+        if args.verbose:
+            print 'Iteration {}'.format(i)
             graph_class(movie_sample[i]).summarize_metrics()
-        #draw_graphs = (i == 0)
-        draw_graphs=False
+        draw_graphs = False
+        if args.draw_examples:
+            draw_graphs = (i == 0) # draw graphs from first character network
 
         predictions, train_accuracy, test_accuracy = classify_graph( \
           movie_sample[i], graph_class, fe.get_multigraph_features, 
-          algo=args.classifier, draw_graphs=draw_graphs)
+          algo=args.classifier, draw_graphs=draw_graphs, verbose=args.verbose)
 
-        # TODO: only if verbose
-        # print '{}'.format(test_accuracy)
+        if args.verbose:
+            print 'Test Accuracy: {}'.format(test_accuracy)
 
         mean_train_accuracy += train_accuracy / len(movie_sample)
         mean_test_accuracy += test_accuracy / len(movie_sample)
-        all_predictions.append(predictions[0])
-    # TODO: change this to summarize the predictions and print results in CSV if output flag given
-    print all_predictions
+
+        movie_name = movies[sample_indices[i]].name
+        all_predictions[movie_name] = predictions[0]
+
+    # Printing movie labels to output CSV if applicable
+    if args.output_predictions is not None:
+        with open(args.output_predictions, 'wb') as f:
+            writer = csv.writer(f)
+            movie_names = sorted(all_predictions.keys())
+            movie_labels = [all_predictions[name] for name in movie_names]
+            writer.writerow(['Movie Name', 'Label of Character Network'])
+            writer.writerows(zip(movie_names, movie_labels))
+
     print 'Mean Train Accuracy: {}'.format(mean_train_accuracy)
     print 'Mean Test Accuracy: {}'.format(mean_test_accuracy)
 

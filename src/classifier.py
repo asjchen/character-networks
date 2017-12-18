@@ -33,7 +33,8 @@ def test_classifier(classifier, test_x):
     return classifier.predict(test_x)
 
 def classify_graph(orig_graph, graph_class, feature_extractor, 
-    algo='KNeighbors', samples_per_category=100, draw_graphs=False):
+    algo='KNeighbors', samples_per_category=100, draw_graphs=False, 
+    verbose=False):
     categories = []
     categories = graph_class.__subclasses__()
     num_categories = len(categories)
@@ -50,8 +51,8 @@ def classify_graph(orig_graph, graph_class, feature_extractor,
             new_directed_graph = categories[c](orig_graph)
             if draw_graphs:
                 new_directed_graph.draw_graph(orig_graph_obj.nx_pos)
-                if i == 0:
-                    new_directed_graph.summarize_metrics()
+            if verbose and i == 0:
+                new_directed_graph.summarize_metrics()
             data_x[samples_per_category * c + i, :] = feature_extractor(\
                 new_directed_graph.graph)
             data_y[samples_per_category * c + i] = c

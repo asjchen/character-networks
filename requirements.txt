@@ -1,0 +1,4 @@
+numpy
+sklearn 
+matplotlib
+networkx==1.11
