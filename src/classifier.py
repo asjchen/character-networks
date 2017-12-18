@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 import graph_generators as gg
+import feature_extractor as fe
 
 classifier_choices = { 'SVC': SVC(), 
     'AdaBoost': AdaBoostClassifier(), 
@@ -32,13 +33,13 @@ def train_classifier(x, y, algo='SVC', train_prop=0.8):
 def test_classifier(classifier, test_x):
     return classifier.predict(test_x)
 
-def classify_graph(orig_graph, graph_class, feature_extractor, 
+def classify_graph(orig_graph, graph_class, feature_names, 
     algo='KNeighbors', samples_per_category=100, draw_graphs=False, 
     verbose=False):
     categories = []
     categories = graph_class.__subclasses__()
     num_categories = len(categories)
-    num_features = feature_extractor(orig_graph).shape[0]
+    num_features = fe.get_features(orig_graph, feature_names).shape[0]
 
     data_x = np.zeros((num_categories * samples_per_category, num_features))
     data_y = np.zeros((num_categories * samples_per_category,))
@@ -53,8 +54,8 @@ def classify_graph(orig_graph, graph_class, feature_extractor,
                 new_directed_graph.draw_graph(orig_graph_obj.nx_pos)
             if verbose and i == 0:
                 new_directed_graph.summarize_metrics()
-            data_x[samples_per_category * c + i, :] = feature_extractor(\
-                new_directed_graph.graph)
+            data_x[samples_per_category * c + i, :] = fe.get_features(\
+                new_directed_graph.graph, feature_names)
             data_y[samples_per_category * c + i] = c
 
     permutation = range(len(data_x))
@@ -66,7 +67,7 @@ def classify_graph(orig_graph, graph_class, feature_extractor,
         data_x, data_y, algo=algo)
 
     test_x = np.zeros((1, num_features))
-    test_x[0, :] = feature_extractor(orig_graph)
+    test_x[0, :] = fe.get_features(orig_graph, feature_names)
     numerical_results = test_classifier(classifier, test_x)
     predictions = [categories[int(numerical_results[i])](orig_graph).name \
         for i in range(len(numerical_results))]

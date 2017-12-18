@@ -3,7 +3,7 @@
 import snap
 import numpy as np
 
-# TODO: this method does not give good accuracy
+# (Note: this method does not give good accuracy)
 # Only for unweighted directed graphs
 def get_k_profiles(graph, k=3):
     # Find all the possible profiles
@@ -63,7 +63,7 @@ def get_k_profiles(graph, k=3):
     gather_k_nodes([])
     return profile_props / np.sum(profile_props)
 
-def get_directed_laplacian(graph):
+def get_normalized_laplacian(graph):
     n = graph.GetNodes()
     laplacian = np.zeros((n, n))
     node_ids = []
@@ -82,39 +82,8 @@ def get_directed_laplacian(graph):
     return laplacian
 
 # Make eigenvalue distribution off of Laplacian matrix
-def get_directed_eigenvalue_distribution(graph, num_buckets=20):
-    laplacian = get_directed_laplacian(graph)
-    eigenvalues, eigenvectors = np.linalg.eig(laplacian)
-    hist, bins = np.histogram(eigenvalues.real, \
-        bins=num_buckets, range=(0.0, 2.0))
-    return hist / float(np.sum(hist))
-    
-def combine_directed_eigen_profiles(graph):
-    eigen_features = get_directed_eigenvalue_distribution(graph)
-    profile_features = get_k_profiles(graph)
-    return np.concatenate((eigen_features, profile_features), axis=0)
-
-def get_unnormalized_laplacian(graph):
-    n = graph.GetNodes()
-    laplacian = np.zeros((n, n))
-    node_ids = []
-    node_id_to_idx = {}
-    for node in graph.Nodes():
-        node_id_to_idx[node.GetId()] = len(node_ids)
-        node_ids.append(node.GetId())
-    for i in range(n):
-        laplacian[i, i] = float(graph.GetNI(node_ids[i]).GetOutDeg())
-    for edge in graph.Edges():
-        src_idx = node_id_to_idx[edge.GetSrcNId()]
-        dst_idx = node_id_to_idx[edge.GetDstNId()]
-        laplacian[src_idx][dst_idx] -= 1.0
-    return laplacian
-
-def get_multi_eigenvalue_distribution(graph, num_buckets=20):
-    laplacian = get_unnormalized_laplacian(graph)
-    for i in range(laplacian.shape[0]):
-        if laplacian[i, i] != 0:
-            laplacian[i, :] /= laplacian[i, i]
+def get_spectral_eigenvalue_distribution(graph, num_buckets=20):
+    laplacian = get_normalized_laplacian(graph)
     eigenvalues, eigenvectors = np.linalg.eig(laplacian)
     hist, bins = np.histogram(eigenvalues.real, \
         bins=num_buckets, range=(0.0, 2.0))
@@ -161,11 +130,17 @@ def get_pagerank_dist(graph):
     snap.GetPageRank(graph, node_pagerank)
     return get_histogram([node_pagerank[node] for node in node_pagerank])
 
-def get_multigraph_features(graph, num_cent_buckets=10, num_eigen_buckets=20):
-    between_features = get_betweenness_centrality_dist(graph, num_buckets=num_cent_buckets)
-    eigen_features = get_multi_eigenvalue_distribution(graph, num_buckets=num_eigen_buckets)
-    centrality_features = get_node_centrality_stats(graph)
-    pagerank_features = get_pagerank_dist(graph)
-    return np.concatenate((between_features, eigen_features), axis=0)
+feature_choices = { \
+    'GraphProfiles': get_k_profiles, 
+    'SpectralHistogram': get_spectral_eigenvalue_distribution,
+    'BetweennessHistogram': get_betweenness_centrality_dist,
+    'NodeCentrality': get_node_centrality_stats,
+    'PageRank': get_pagerank_dist 
+}
+default_feature_names = ['SpectralHistogram', 'BetweennessHistogram']
+
+def get_features(graph, feature_names):
+    vector_list = [feature_choices[name](graph) for name in feature_names]
+    return np.concatenate(tuple(vector_list), axis=0)
 
 

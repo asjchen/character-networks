@@ -146,11 +146,10 @@ class DirectedConfiguration(DirectedGraphModel):
             self.reset_graph(orig_graph)
             random.shuffle(in_stubs) # only one list needs to be shuffled
             for i in range(len(in_stubs)):
-                if in_stubs[i] == out_stubs[i] or \
-                    self.graph.IsEdge(out_stubs[i], in_stubs[i]):
-
+                if in_stubs[i] == out_stubs[i]:
                     graph_valid = False
                     break
+                # For time purposes, ignore multiple edges
                 self.graph.AddEdge(out_stubs[i], in_stubs[i])
         self.create_nx_graph()
 

@@ -36,7 +36,11 @@ def main():
     parser.add_argument('--output_predictions', '-o', 
         help=('Filename of CSV to store the labels of the movie '
             'character networks'))
-    # TODO: add option to select multiple features and have functions to combine them
+    parser.add_argument('--feature', '-f', action='append', 
+        choices=fe.feature_choices.keys(),
+        help=('Adds features to consider for each graph among {}, default '
+            'is {}'.format(fe.feature_choices.keys(), 
+                fe.default_feature_names)))
     args = parser.parse_args()
 
     graph_class = gg.GraphModel
@@ -44,6 +48,9 @@ def main():
         graph_class = gg.UndirectedMultiGraphModel
     elif args.graph_type == 'directed':
         graph_class = gg.DirectedGraphModel
+
+    if args.feature is None:
+        args.feature = fe.default_feature_names
 
     # Make bin directory if it doesn't exist
     project_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -71,7 +78,7 @@ def main():
             draw_graphs = (i == 0) # draw graphs from first character network
 
         predictions, train_accuracy, test_accuracy = classify_graph( \
-          movie_sample[i], graph_class, fe.get_multigraph_features, 
+          movie_sample[i], graph_class, args.feature, 
           algo=args.classifier, draw_graphs=draw_graphs, verbose=args.verbose)
 
         if args.verbose:
