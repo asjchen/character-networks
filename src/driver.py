@@ -56,7 +56,8 @@ def main():
     if args.feature is None:
         args.feature = fe.default_feature_names
     if graph_class == gg.UndirectedMultiGraphModel:
-        if 'GraphProfiles' in args.feature: 
+        if 'GraphProfiles' in args.feature:
+            # Graph profiles are more applicable to simple graphs
             raise Exception(
                 'Cannot pull GraphProfiles features from multigraphs')
     args.feature = list(set(args.feature))

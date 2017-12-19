@@ -43,7 +43,7 @@ pip install -r requirements.txt
 ```
 
 
-## Running Script
+## Running Scripts
 
 Migrate to the src/ directory and run the following command:
 ```
