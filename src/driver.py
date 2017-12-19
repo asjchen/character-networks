@@ -6,7 +6,7 @@ import os
 import csv
 
 from data_processors import get_movie_networks
-from classifier import classify_graph
+from classifier import classify_graph, classifier_choices
 import feature_extractor as fe
 import graph_generators as gg
 
@@ -17,8 +17,9 @@ def main():
             'networks, which are then classified as one of several random '
             'graph models (see README for more details)'))
     parser.add_argument('data_dir', help='Directory containing dialog data')
-    parser.add_argument('--classifier', '-c', default='SVC', 
-        help='Classifier algorithm: choose between SVC or Adaboost')
+    parser.add_argument('--classifier', '-c', default='KNeighbors',
+        help=('Classifier algorithm: choose from '
+            '{}'.format(classifier_choices.keys())))
     parser.add_argument('--graph_type', '-g', default='multigraph', 
         choices=['multigraph', 'directed'], 
         help=('Graph type to be created, choices are multigraph (each '
@@ -39,9 +40,9 @@ def main():
             'character networks'))
     parser.add_argument('--feature', '-f', action='append', 
         choices=fe.feature_choices.keys(),
-        help=('Adds features to consider for each graph among {}, default '
-            'is {}'.format(fe.feature_choices.keys(), 
-                fe.default_feature_names)))
+        help=('Adds features to consider for each graph among {} '
+            '(this flag can be used more than once), default is '
+            '{}'.format(fe.feature_choices.keys(), fe.default_feature_names)))
     args = parser.parse_args()
 
     # Choose which graph model to use

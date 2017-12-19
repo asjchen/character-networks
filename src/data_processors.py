@@ -9,7 +9,6 @@
 # characters A and B for each conversation they have had
 
 import ast
-import argparse
 import os
 import re
 import snap
