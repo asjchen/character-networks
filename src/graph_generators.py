@@ -10,13 +10,16 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 
+# Converts the name into a format for filenames
 def underscore_name(name):
     return '_'.join(name.lower().split())
 
+# Base class representing a graph, with methods to describe the graph
 class GraphModel(object):
     def __init__(self, orig_graph):
         self.name = 'Graph'
     
+    # Provides a brief overview of characteristics of the graph
     def summarize_metrics(self):
         print 'Name: {}'.format(self.name)
         print 'Number of Nodes: {}'.format(self.get_num_nodes())
@@ -29,12 +32,16 @@ class GraphModel(object):
             self.get_clustering_coefficient())
         print ''
 
+    # Returns the number of nodes in the graph
     def get_num_nodes(self):
         return self.graph.GetNodes()
 
+    # Returns the number of edges in the graph
     def get_num_edges(self):
         return self.graph.GetEdges()
 
+    # Helper method to plot a degree distribution and return 
+    # the filename of that plot (in the bin directory)
     def plot_degree_dist(self, degrees, deg_type):
         frequencies = { deg: degrees.count(deg) for deg in degrees }
         x, y = zip(*(sorted(frequencies.items(), key=lambda x: x[0])))
@@ -50,25 +57,30 @@ class GraphModel(object):
         plt.close()
         return filename
 
+    # Plots the indegree distribution and returns the filename of the plot
     def plot_indegree_dist(self):
         indegrees = []
         for node in self.graph.Nodes():
             indegrees.append(node.GetInDeg())
         return self.plot_degree_dist(indegrees, 'Indegree')
 
+    # Plots the outdegree distribution and returns the filename of the plot
     def plot_outdegree_dist(self):
         outdegrees = []
         for node in self.graph.Nodes():
             outdegrees.append(node.GetOutDeg())
         return self.plot_degree_dist(outdegrees, 'Outdegree')
 
+    # Returns the ratio of (# of edges connecting node i's neighbors) to
+    # (# of possible edges connecting node i's neighbors) over all nodes i
     def get_clustering_coefficient(self):
         return snap.GetClustCf(self.graph)
 
+    # Draws the graph -- implemented in the child classes
     def draw_graph(self, name=None):
         pass
 
-
+# Represents a directed graph with methods to draw the graph with NetworkX
 class DirectedGraphModel(GraphModel):
     def __init__(self, orig_graph):
         super(DirectedGraphModel, self).__init__(orig_graph)
@@ -78,6 +90,8 @@ class DirectedGraphModel(GraphModel):
             self.graph.AddEdge(edge.GetSrcNId(), edge.GetDstNId())
         self.create_nx_graph()
 
+    # Sets self.graph to be a graph with the same nodes as orig_graph 
+    # (which is a Snap graph object), but with zero edges
     def reset_graph(self, orig_graph):
         self.num_orig_nodes = orig_graph.GetNodes()
         self.num_orig_edges = orig_graph.GetEdges()
@@ -85,6 +99,8 @@ class DirectedGraphModel(GraphModel):
         for node in orig_graph.Nodes():
             self.graph.AddNode(node.GetId())
 
+    # Produces a NetworkX graph from self.graph and computes the node
+    # coordinates for the NetworkX graph object (for plotting the graph)
     def create_nx_graph(self):
         self.nx_graph = nx.DiGraph()
         node_list = [node.GetId() for node in self.graph.Nodes()]
@@ -94,6 +110,7 @@ class DirectedGraphModel(GraphModel):
         self.nx_graph.add_edges_from(edge_list)
         self.nx_pos = nx.spring_layout(self.nx_graph)
 
+    # Draws the NetworkX graph, with an optional filename.
     # nx_pos is a dictionary mapping to the coordinates of the nodes
     # it's the pos parameter for networkx drawing functions
     def draw_graph(self, nx_pos, name=None):
@@ -104,12 +121,17 @@ class DirectedGraphModel(GraphModel):
         plt.savefig(filename)
         plt.close()
 
+# Based on the original graph, produces an Erdos-Renyi graph so that 
+# every possible edge between nodes has probability E / (N * (N - 1))
+# of existing (where E is the original number of edges and N is the 
+# original number of nodes)
 class DirectedErdosRenyi(DirectedGraphModel):
     def __init__(self, orig_graph):
         self.name = 'Directed Erdos Renyi'
         self.reset_graph(orig_graph)
-        n = self.num_orig_edges
-        prob_edge_exists = float(n) / (n * (n - 1))
+        n = self.num_orig_nodes
+        # Note that there are n * (n - 1) possible directed edges
+        prob_edge_exists = float(self.num_orig_edges) / (n * (n - 1))
         for node1 in orig_graph.Nodes():
             for node2 in orig_graph.Nodes():
                 if node1.GetId() == node2.GetId():
@@ -118,7 +140,9 @@ class DirectedErdosRenyi(DirectedGraphModel):
                     self.graph.AddEdge(node1.GetId(), node2.GetId())
         self.create_nx_graph()
 
-
+# Based on the original graph, produces a Chung Lu graph so that given node i
+# with original outdegree D_i and node j with original indegree d_j, the 
+# probability of edge i -> j existing is proportional to D_i * d_j
 class DirectedChungLu(DirectedGraphModel):
     def __init__(self, orig_graph):
         self.name = 'Directed Chung Lu'
@@ -131,7 +155,11 @@ class DirectedChungLu(DirectedGraphModel):
                 if random.random() < proportional / float(self.num_orig_edges):
                     self.graph.AddEdge(node2.GetId(), node1.GetId())
         self.create_nx_graph()
-        
+
+# Based on the original graph, produces a graph from the configuration model
+# In this process, we split the original graphs' edges into "stubs" (one 
+# in-stub and one out-stub), which we then randomly pair to produce new edges 
+# for the new graph (so every edge consists of one in-stub and one out-stub)     
 class DirectedConfiguration(DirectedGraphModel):
     def __init__(self, orig_graph):
         self.name = 'Directed Configuration'
@@ -153,6 +181,13 @@ class DirectedConfiguration(DirectedGraphModel):
                 self.graph.AddEdge(out_stubs[i], in_stubs[i])
         self.create_nx_graph()
 
+# Based on the original graph, produces a graph from the Fast Reciprocal 
+# Directed model (see Durak et al. 2012). In implementation, the model is
+# similar to the configuration model, but it first examines reciprocated 
+# edges (a pair of nodes that have edges in both directions); we create 
+# "stubs" of all reciprocated edges, pair the stubs randomly, and create
+# reciprocated edges with the pairings. Then, we proceed as with the 
+# directed configuration for the original unreciprocated edges
 class FastReciprocalDirected(DirectedGraphModel):
     def __init__(self, orig_graph):
         self.name = 'Directed FRD'
@@ -187,6 +222,12 @@ class FastReciprocalDirected(DirectedGraphModel):
             self.graph.AddEdge(out_stubs[idx1], in_stubs[idx2])
         self.create_nx_graph()
 
+# Based on the original graph, produces a directed Preferential Attachment
+# graph, in which we introduce nodes i into the new graph. With prob_uniform
+# probability, we create an edge from i to a uniformly randomly chosen node.
+# Otherwise, we randomly choose the other endpoint for the new edge with
+# probabilities proportional to their current indegrees (the scheme is 
+# described as "the rich get richer")
 class DirectedPreferentialAttachment(DirectedGraphModel):
     def __init__(self, orig_graph, ordered=False, prob_uniform=0.2):
         self.name = 'Directed Preferential Attachment'
@@ -208,6 +249,7 @@ class DirectedPreferentialAttachment(DirectedGraphModel):
                 self.graph.AddEdge(node_id, neighbor)
         self.create_nx_graph()
 
+# Represents an undirected multigraph with methods to draw with NetworkX
 # Recall that while TNEANet yields directed graphs, we are only interested
 # in undirected multigraphs in this case
 class UndirectedMultiGraphModel(GraphModel):
@@ -219,6 +261,8 @@ class UndirectedMultiGraphModel(GraphModel):
             self.graph.AddEdge(edge.GetSrcNId(), edge.GetDstNId())
         self.create_nx_graph()
 
+    # Sets self.graph to be a graph with the same nodes as orig_graph 
+    # (which is a Snap graph object), but with zero edges
     def reset_graph(self, orig_graph):
         self.num_orig_nodes = orig_graph.GetNodes()
         # Half number of edges because we're interested in undirected edges
@@ -227,8 +271,9 @@ class UndirectedMultiGraphModel(GraphModel):
         for node in orig_graph.Nodes():
             self.graph.AddNode(node.GetId())
 
+    # Produces a NetworkX graph from self.graph and computes the node
+    # coordinates for the NetworkX graph object (for plotting the graph)
     def create_nx_graph(self):
-        # Convert to networkx graph object
         self.nx_graph = nx.MultiGraph()
         node_list = [node.GetId() for node in self.graph.Nodes()]
         self.nx_graph.add_nodes_from(node_list)
@@ -237,9 +282,14 @@ class UndirectedMultiGraphModel(GraphModel):
         self.nx_graph.add_edges_from(edge_list)
         self.nx_pos = nx.spring_layout(self.nx_graph)
 
+    # Draws the NetworkX graph, with an optional filename.
+    # nx_pos is a dictionary mapping to the coordinates of the nodes
+    # it's the pos parameter for networkx drawing functions
     def draw_graph(self, nx_pos, name=None):
         nx.draw_networkx_nodes(self.nx_graph, nx_pos)
 
+        # Between two nodes, only one edge is drawn, but its width is 
+        # proportional to the number of edges between the pair of nodes
         edge_list = sorted([(edge.GetSrcNId(), edge.GetDstNId()) \
             for edge in self.graph.Edges()])
         left_ptr = 0
@@ -261,7 +311,9 @@ class UndirectedMultiGraphModel(GraphModel):
         plt.savefig(filename)
         plt.close()
 
-
+# Based on the original graph, produces a graph from the configuration model
+# In this process, we split the original graphs' edges into "stubs", which we 
+# then randomly pair to produce new edges for the new graph 
 class MultiConfiguration(UndirectedMultiGraphModel):
     def __init__(self, orig_graph):
         self.name = 'Multigraph Configuration'
@@ -276,8 +328,9 @@ class MultiConfiguration(UndirectedMultiGraphModel):
                 self.graph.AddEdge(stubs[i + 1], stubs[i])
         self.create_nx_graph()
 
+# Based on the original graph, produces an Erdos-Renyi null graph
 # In this definition, we are guaranteed to have self.num_orig_edges edges
-# in the new graph, which we randomly sample from a probability
+# in the new graph, which we randomly sample from a uniform probability
 # distribution over possible edge locations
 class MultiErdosRenyi(UndirectedMultiGraphModel):
     def __init__(self, orig_graph):
@@ -295,6 +348,9 @@ class MultiErdosRenyi(UndirectedMultiGraphModel):
             self.graph.AddEdge(node_list[idx2], node_list[idx1])
         self.create_nx_graph()
 
+# Based on the original graph, produces a Chung Lu graph so that given nodes
+# i and j with original degrees d_i and d_j, the probability of an edge (i, j)
+# existing is proportional to d_i * d_j
 class MultiChungLu(UndirectedMultiGraphModel):
     def __init__(self, orig_graph):
         self.name = 'Multigraph Chung Lu'
@@ -318,6 +374,12 @@ class MultiChungLu(UndirectedMultiGraphModel):
             self.graph.AddEdge(edge_list[edge_idx][1], edge_list[edge_idx][0])
         self.create_nx_graph()
 
+# Based on the original graph, produces a Preferential Attachment graph, in 
+# which we introduce nodes i into the new graph. With some probability, we 
+# create an edge from i to a uniformly randomly chosen node. Otherwise, we 
+# randomly choose the other endpoint for the new edge with probabilities 
+# proportional to their current degrees (the scheme is described as "the 
+# rich get richer")
 class MultiPreferentialAttachment(UndirectedMultiGraphModel):
     def __init__(self, orig_graph, smoothing=0.5):
         self.name = 'Multigraph Preferential Attachment'

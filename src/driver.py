@@ -1,4 +1,4 @@
-# Driver
+# Driver -- use this script to run the classification algorithm
 
 import argparse
 import random
@@ -11,6 +11,7 @@ import feature_extractor as fe
 import graph_generators as gg
 
 def main():
+    # Argument parser
     parser = argparse.ArgumentParser(
         description=('Reads and converts movie dialog data to character '
             'networks, which are then classified as one of several random '
@@ -43,14 +44,21 @@ def main():
                 fe.default_feature_names)))
     args = parser.parse_args()
 
+    # Choose which graph model to use
     graph_class = gg.GraphModel
     if args.graph_type == 'multigraph':
         graph_class = gg.UndirectedMultiGraphModel
     elif args.graph_type == 'directed':
         graph_class = gg.DirectedGraphModel
 
+    # Select features to extract from graphs
     if args.feature is None:
         args.feature = fe.default_feature_names
+    if graph_class == gg.UndirectedMultiGraphModel:
+        if 'GraphProfiles' in args.feature: 
+            raise Exception(
+                'Cannot pull GraphProfiles features from multigraphs')
+    args.feature = list(set(args.feature))
 
     # Make bin directory if it doesn't exist
     project_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
@@ -58,6 +66,7 @@ def main():
     if not os.path.isdir(bin_dir):
         os.mkdir(bin_dir)
 
+    # Obtain character networks and pick sample of those networks
     movies, movie_networks = get_movie_networks(args.data_dir, graph_class)
     randomized_keys = movie_networks.keys()
     random.shuffle(randomized_keys)
@@ -69,6 +78,8 @@ def main():
     mean_train_accuracy = 0.0
     mean_test_accuracy = 0.0
     all_predictions = {}
+
+    # Produce classifiers and labels
     for i in range(len(movie_sample)):
         if args.verbose:
             print 'Iteration {}'.format(i)

@@ -1,12 +1,21 @@
-# Feature Extractor 
+# Feature Extractor -- functions to pull different quantitative chracteristics
+# from a given graph. such as centrality of each node, distribution of graph 
+# motifs, etc. Each function description has more information about the 
+# features it provides.
+
+# In all functions, graph represents a Snap TUNGraph, TNGraph, or TNEANet.
 
 import snap
 import numpy as np
 
-# (Note: this method does not give good accuracy)
-# Only for unweighted directed graphs
+# Takes all sets of k nodes (called graphlets or graph profiles) and measures 
+# the proportion each possible topology (i.e. 0 edges? 2 edges originating 
+# from the same node?) Note: this method often does not give good 
+# classification accuracy. (Only for unweighted directed graphs)
 def get_k_profiles(graph, k=3):
-    # Find all the possible profiles
+    # Find all the possible profiles of size k
+    # TODO: move construct_k_graph so it's only called once in total rather than
+    # whenever we extract features
     possible_profiles = []
     def construct_k_graph(curr_graph, edge_pair):
         if edge_pair[0] == k:
@@ -31,11 +40,13 @@ def get_k_profiles(graph, k=3):
     for i in range(k):
         k_graph.AddNode(i)
     construct_k_graph(k_graph, [0, 1])
+
+    # Extract features from original graph
     profile_props = np.zeros((len(possible_profiles),))
     node_list = []
     for node in graph.Nodes():
         node_list.append(node.GetId())
-
+    # Searches for k-profiles in original graph
     def gather_k_nodes(curr_nodes):
         if len(curr_nodes) == k:
             curr_profile = []
@@ -63,6 +74,9 @@ def get_k_profiles(graph, k=3):
     gather_k_nodes([])
     return profile_props / np.sum(profile_props)
 
+
+# Produces the Laplacian matrix for a graph, for which every row is normalized
+# independently so that the diagonal only has 1's or 0's
 def get_normalized_laplacian(graph):
     n = graph.GetNodes()
     laplacian = np.zeros((n, n))
@@ -81,7 +95,10 @@ def get_normalized_laplacian(graph):
         laplacian[src_idx][dst_idx] -= 1.0 / normalizer
     return laplacian
 
-# Make eigenvalue distribution off of Laplacian matrix
+# Produces a distribution/histogram from the eigenvalues of the
+# normalized Laplacian matrix. Note all such values lie in (0, 2)
+# (We use a histogram so that the number of features is independent
+# of the size of the graph.)
 def get_spectral_eigenvalue_distribution(graph, num_buckets=20):
     laplacian = get_normalized_laplacian(graph)
     eigenvalues, eigenvectors = np.linalg.eig(laplacian)
@@ -89,6 +106,8 @@ def get_spectral_eigenvalue_distribution(graph, num_buckets=20):
         bins=num_buckets, range=(0.0, 2.0))
     return hist / float(np.sum(hist))
 
+# Helper function to produce a histogram between the minimum and maximum
+# values in a given list of values
 def get_histogram(values, num_buckets=10):
     if len(values) == 0:
         return np.full((num_buckets,), 0.0)
@@ -101,6 +120,10 @@ def get_histogram(values, num_buckets=10):
             bins=num_buckets, range=(0.0, 1.0))
     return hist / float(np.sum(hist))
 
+# Produces two histograms representing the distributions of the node 
+# betweenness centralities and the edge betweenness centralities
+# (We use a histogram so that the number of features is independent
+# of the number of graph nodes and edges.)
 def get_betweenness_centrality_dist(graph, num_buckets=10):
     node_cent = snap.TIntFltH()
     edge_cent = snap.TIntPrFltH()
@@ -115,6 +138,8 @@ def get_betweenness_centrality_dist(graph, num_buckets=10):
     edge_hist = get_histogram(edge_betweenness, num_buckets=num_buckets)
     return np.concatenate((node_hist, edge_hist), axis=0)
 
+# Gathers the graph's clustering coefficient, minimum eccentricity, and 
+# maximum eccentricity
 def get_node_centrality_stats(graph):
     cluster_coeff = snap.GetClustCf(graph)
     min_ecc = graph.GetNodes() + 1
@@ -125,11 +150,13 @@ def get_node_centrality_stats(graph):
         max_ecc = max(ecc, max_ecc)
     return np.array([cluster_coeff, max_ecc, min_ecc])
 
+# Produces a histogram of the graph nodes' PageRank values
 def get_pagerank_dist(graph):
     node_pagerank = snap.TIntFltH()
     snap.GetPageRank(graph, node_pagerank)
     return get_histogram([node_pagerank[node] for node in node_pagerank])
 
+# List of possible features 
 feature_choices = { \
     'GraphProfiles': get_k_profiles, 
     'SpectralHistogram': get_spectral_eigenvalue_distribution,
@@ -139,6 +166,8 @@ feature_choices = { \
 }
 default_feature_names = ['SpectralHistogram', 'BetweennessHistogram']
 
+# Concatenates all the feature vectors as determined by feature_names,
+# which is a list of strings chosen from feature_choices
 def get_features(graph, feature_names):
     vector_list = [feature_choices[name](graph) for name in feature_names]
     return np.concatenate(tuple(vector_list), axis=0)

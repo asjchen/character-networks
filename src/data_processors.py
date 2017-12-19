@@ -10,21 +10,26 @@
 
 import ast
 import argparse
-import csv
 import os
 import re
 import snap
 
 import graph_generators as gg
 
+# Names of the files in the data directory
 movies_filename = 'movie_titles_metadata.tsv'
 characters_filename = 'movie_characters_metadata.tsv'
 conversations_filename = 'movie_conversations.tsv'
 lines_filename = 'movie_lines.tsv'
 
+# Filters the quotation marks in the CSV entries
 def filter_quote_marks(row):
     return [re.sub('\"', '', entry) for entry in row]
 
+# Represents a character from a certain movie
+# The input raw_row is a list of string entries, representing a row in the CSV
+# In the object, id, movie_id, and credits_position are integers,
+# and the name and gender are strings
 class Character:
     def __init__(self, raw_row):
         assert raw_row[0][0] == 'u'
@@ -34,6 +39,11 @@ class Character:
         self.gender = raw_row[4]
         self.credits_position = int(raw_row[5]) if raw_row[5] != '?' else None
 
+# Represents the line of dialog spoken by a certain character
+# The input raw_row is a list of string entries, representing a row in the CSV,
+# and characters is a dictionary mapping character ID to Character object
+# In the object, id and movie_id are integers, character is a Character object,
+# and text is a string
 class Line:
     def __init__(self, raw_row, characters):
         assert raw_row[0][0] == 'L'
@@ -42,6 +52,12 @@ class Line:
         self.movie_id = int(raw_row[2][1:])
         self.text = raw_row[4]
 
+# Represents a conversation between two characters
+# The input raw_row is a list of string entries, representing a row in the CSV,
+# characters is a dictionary mapping ID to Character object, and lines is a 
+# dictionary mapping line ID to Line object
+# In the object, characters is a set of two Character objects, 
+# movie_id is an integer, and lines is a list of Line objects
 class Conversation:
     def __init__(self, raw_row, characters, lines):
         self.characters = set([characters[int(raw_row[0][1:])], 
@@ -50,6 +66,15 @@ class Conversation:
         self.lines = [lines[int(line_id[1:])] for line_id \
             in ast.literal_eval(re.sub('\' \'', '\',\'', raw_row[3]))]
 
+# Represents a movie
+# The input raw_row is a list of string entries, representing a row in the CSV,
+# movie_to_characters is a dictionary mapping movie ID to list of Character 
+# objects, movie_to_conversations is a dictionary mapping mapping movie ID to
+# list of Conversation objects
+# In the object, id, year, and imdb_votes are integers, name is a 
+# string, imdb_rating is a float, genres is a list of strings, characters is a
+# list of Character objects, and conversations is a list of Conversation 
+# objects
 class Movie:
     def __init__(self, raw_row, movie_to_characters, movie_to_conversations):
         assert raw_row[0][0] == 'm'
@@ -62,8 +87,10 @@ class Movie:
         self.characters = movie_to_characters[self.id]
         self.conversations = movie_to_conversations[self.id]
 
-
-# TODO: better metric for measuring conversation dynamics
+# Converts a Movie object into a directed graph (TNGraph) character network.
+# It creates an edge from character A to character B if there is a conversation
+# between them in which B speaks more words than A
+# (TODO: find a better asymmetric metric for measuring conversation dynamics)
 def graph_talks_more_words(movie):
     graph = snap.PNGraph.New()
     for ch in movie.characters:
@@ -77,20 +104,28 @@ def graph_talks_more_words(movie):
         graph.AddEdge(sorted_char_ids[0], sorted_char_ids[1])
     return graph
 
+# Converts a Movie object into an undirected multigraph (TNEANet with every 
+# edge reciprocated) character network. It creates an edge between characters
+# A and B for every conversation that they have with each other (so multiple 
+# edges can exist between two characters)
 def graph_conversations_undirected(movie):
     graph = snap.TNEANet.New()
     for ch in movie.characters:
         graph.AddNode(ch.id)
     for conv in movie.conversations:
         chars = list(conv.characters)
-        #for j in range(len(conv.lines)):
         graph.AddEdge(chars[0].id, chars[1].id)
         graph.AddEdge(chars[1].id, chars[0].id)
     return graph
 
+# Takes the path of the data directory and a graph class [DirectedGraphModel 
+# and UndirectedMultiGraphModel] and produces two dictionaries: movies maps
+# ID to Movie object and movie_networks maps ID to graph_class object
 def get_movie_networks(data_dir, graph_class):
     movie_to_characters = {}
     id_to_character = {}
+
+    # Note: most entries are separated by the tab character
     with open(os.path.join(data_dir, characters_filename)) as char_file:
         for raw_row in char_file.readlines():
             row = filter_quote_marks(raw_row.strip().split('\t'))
